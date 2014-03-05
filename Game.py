@@ -2,6 +2,7 @@ import pygame
 import sys
 import random
 from pygame.locals import *
+import collections
 
 import RoadPiece
 import AvailablePieces
@@ -18,7 +19,14 @@ class Game:
         self.mouseIsDown = False
         pygame.display.set_caption(self.title)
 
-        self.road_filenames = ["straight.png","turnLeft.png","turnRight.png","teeJunction.png"]
+        self.road = collections.namedtuple('road','filename exits')
+        self.roads = [
+            self.road("straight.png", 'NS'),
+            self.road("turnLeft.png", 'SW'),
+            self.road("turnRight.png", 'SE'),
+            self.road("teeJunction.png", 'SEW'),
+            self.road("crossJunction.png", 'NEWS')
+        ]
         self.roadPieces = pygame.sprite.Group()
         self.objects_to_draw = pygame.sprite.Group()
         self.available_pieces = AvailablePieces.AvailablePieces(self)
@@ -27,10 +35,11 @@ class Game:
         self.process_events()
         # Game logic goes here...
         if self.mouseIsDown:
-            self.roadPieces.add( RoadPiece.RoadPiece(self, self.road_filenames[random.randrange(len(self.road_filenames))], self.currentMousePos) )
+            randIndex = random.randrange(len(self.roads))
+            self.roadPieces.add( RoadPiece.RoadPiece(self, self.roads[randIndex].filename, self.currentMousePos, 30, self.roads[randIndex].exits) )
             self.mouseIsDown = False
             for road in self.roadPieces.sprites():
-                road.move(road.rect.center, 90*random.randrange(4))
+                road.move(road.rect.center, random.choice('NEWS'))
 
         # Render the scene (This draws the background, updates all objects_to_draw, then draws them all to the screen
         # and flips the display.)
