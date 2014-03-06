@@ -6,6 +6,7 @@ import collections
 
 import RoadPiece
 import AvailablePieces
+import Board
 
 class Game:
     def __init__(self):
@@ -27,18 +28,27 @@ class Game:
             self.road("teeJunction.png", 'SEW'),
             self.road("crossJunction.png", 'NEWS')
         ]
-        self.roadPieces = pygame.sprite.Group()
-        self.objects_to_draw = pygame.sprite.Group()
+        self.roadPieces = []
+        self.objects_to_draw = pygame.sprite.LayeredUpdates()
         self.available_pieces = AvailablePieces.AvailablePieces(self)
+        board_ypos = ( int(self.available_pieces.rect.height / RoadPiece.RoadPiece.size)+1 ) * RoadPiece.RoadPiece.size # Ensure is a multiple of 32, and further down than available pieces.
+        self.board = Board.Board(self, [ # Bounds of the board are everything but the available pieces area.
+            0, # Left
+            board_ypos, # Top
+            self.resolution[0], # Width
+            self.resolution[1]-board_ypos]) # Height
 
     def run_loop(self):
         self.process_events()
         # Game logic goes here...
         if self.mouseIsDown:
             randIndex = random.randrange(len(self.roads))
-            self.roadPieces.add( RoadPiece.RoadPiece(self, self.roads[randIndex].filename, self.currentMousePos, 30, self.roads[randIndex].exits) )
+            try:
+                self.roadPieces.append( RoadPiece.RoadPiece(self, self.roads[randIndex].filename, self.currentMousePos, 30, self.roads[randIndex].exits) )
+            except ValueError as e:
+                print(e)
             self.mouseIsDown = False
-            for road in self.roadPieces.sprites():
+            for road in self.roadPieces:
                 road.move(road.rect.center, random.choice('NEWS'))
 
         # Render the scene (This draws the background, updates all objects_to_draw, then draws them all to the screen
