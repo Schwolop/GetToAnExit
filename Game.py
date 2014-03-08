@@ -9,6 +9,10 @@ import AvailablePieces
 import Board
 
 class Game:
+    TIMER_TICK = USEREVENT+1
+    GAME_EVENT = USEREVENT+2
+    GENERATE_NEW_PIECE = 1
+    EXCESS_PIECES_CREATED = 2
     def __init__(self):
         pygame.init()
         self.resolution = (640,480)
@@ -19,6 +23,9 @@ class Game:
         self.currentMousePos = None
         self.mouseIsDown = False
         pygame.display.set_caption(self.title)
+
+        self.spawn_new_piece_time = 500 # Time (ms) before a new piece is spawned.
+        self.last_spawn_new_piece_time = pygame.time.get_ticks()
 
         self.road = collections.namedtuple('road','filename exits')
         self.roads = [
@@ -38,13 +45,16 @@ class Game:
             self.resolution[0], # Width
             self.resolution[1]-board_ypos]) # Height
 
+        # Create timer tick.
+        pygame.time.set_timer(Game.TIMER_TICK, 10)
+
     def run_loop(self):
         self.process_events()
         # Game logic goes here...
         if self.mouseIsDown:
             randIndex = random.randrange(len(self.roads))
             try:
-                self.roadPieces.append( RoadPiece.RoadPiece(self, self.roads[randIndex].filename, self.currentMousePos, 30, self.roads[randIndex].exits) )
+                self.roadPieces.append( RoadPiece.RoadPiece(self, self.roads[randIndex].filename, self.currentMousePos, 0, self.roads[randIndex].exits) )
             except ValueError as e:
                 print(e)
             self.mouseIsDown = False
@@ -64,6 +74,13 @@ class Game:
                 self.currentMousePos = event.pos
             elif event.type == MOUSEBUTTONDOWN:
                 self.mouseIsDown = True
+            elif event.type == Game.TIMER_TICK:
+                self.do_timer_tick()
+            elif event.type == Game.GAME_EVENT:
+                if event.subtype == Game.GENERATE_NEW_PIECE:
+                    self.available_pieces.try_generate_new_piece()
+                elif event.subtype == Game.EXCESS_PIECES_CREATED:
+                    self.end_game(event.subtype)
 
     def render(self):
         self.screen.fill((0,0,0))
@@ -71,3 +88,17 @@ class Game:
         self.objects_to_draw.draw(self.screen)
         pygame.display.flip()
         self.fps_clock.tick(self.desired_frame_rate)
+
+    def do_timer_tick(self):
+        if pygame.time.get_ticks() - self.last_spawn_new_piece_time > self.spawn_new_piece_time:
+            try:
+                pygame.event.post( pygame.event.Event( Game.GAME_EVENT, {'subtype':Game.GENERATE_NEW_PIECE} ) )
+            except Exception as e:
+                print(e)
+            self.last_spawn_new_piece_time = pygame.time.get_ticks()
+
+    def end_game(self,cause):
+        # Disable timer tick
+        pygame.time.set_timer(Game.TIMER_TICK, 0)
+
+        print("End of game, cause = "+str(cause))
