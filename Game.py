@@ -6,6 +6,8 @@ import collections
 
 import RoadPiece
 import AvailablePieces
+import BeingDraggedPiece
+import BoardPiece
 import Board
 
 class Game:
@@ -22,6 +24,8 @@ class Game:
         self.desired_frame_rate = 60
         self.currentMousePos = None
         self.mouseIsDown = False
+        self.mouseJustWentDown = False
+        self.mouseJustWentUp = False
         pygame.display.set_caption(self.title)
 
         self.spawn_new_piece_time = 500 # Time (ms) before a new piece is spawned.
@@ -36,7 +40,9 @@ class Game:
             self.road("crossJunction.png", 'NEWS')
         ]
         self.roadPieces = []
+
         self.objects_to_draw = pygame.sprite.LayeredUpdates()
+        self.beingDraggedPiece = None
         self.available_pieces = AvailablePieces.AvailablePieces(self)
         board_ypos = ( int(self.available_pieces.rect.height / RoadPiece.RoadPiece.size)+1 ) * RoadPiece.RoadPiece.size # Ensure is a multiple of 32, and further down than available pieces.
         self.board = Board.Board(self, [ # Bounds of the board are everything but the available pieces area.
@@ -51,15 +57,27 @@ class Game:
     def run_loop(self):
         self.process_events()
         # Game logic goes here...
+        if self.mouseJustWentDown:
+            (result,pieceToBeDragged) = self.available_pieces.mouse_click_can_start_dragging(self.currentMousePos)
+            if result:
+                # Create a BeingDraggedPiece that follows the mouse, and takes other parameters from the 'pieceToBeDragged'.
+                self.beingDraggedPiece = BeingDraggedPiece.BeingDraggedPiece(
+                    self,
+                    pieceToBeDragged.filename,
+                    self.currentMousePos,
+                    pieceToBeDragged.orientation,
+                    pieceToBeDragged.exits)
+                self.objects_to_draw.add(self.beingDraggedPiece)
+        if self.mouseJustWentUp:
+            if self.beingDraggedPiece:
+                self.beingDraggedPiece.kill()
         if self.mouseIsDown:
-            randIndex = random.randrange(len(self.roads))
-            try:
-                self.roadPieces.append( RoadPiece.RoadPiece(self, self.roads[randIndex].filename, self.currentMousePos, 0, self.roads[randIndex].exits) )
-            except ValueError as e:
-                print(e)
-            self.mouseIsDown = False
-            for road in self.roadPieces:
-                road.move(road.rect.center, random.choice('NEWS'))
+            if self.beingDraggedPiece:
+                self.beingDraggedPiece.move(self.currentMousePos)
+
+        # Clear all one-iteration flags.
+        self.mouseJustWentDown = False
+        self.mouseJustWentUp = False
 
         # Render the scene (This draws the background, updates all objects_to_draw, then draws them all to the screen
         # and flips the display.)
@@ -74,6 +92,10 @@ class Game:
                 self.currentMousePos = event.pos
             elif event.type == MOUSEBUTTONDOWN:
                 self.mouseIsDown = True
+                self.mouseJustWentDown = True
+            elif event.type == MOUSEBUTTONUP:
+                self.mouseIsDown = False
+                self.mouseJustWentUp = True
             elif event.type == Game.TIMER_TICK:
                 self.do_timer_tick()
             elif event.type == Game.GAME_EVENT:

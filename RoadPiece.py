@@ -1,32 +1,28 @@
 import pygame
 
-import Game
-import Board
-
 class RoadPiece(pygame.sprite.Sprite):
     size = 32
     def __init__(self, the_game, filename, position, orientation, exits):
         pygame.sprite.Sprite.__init__(self)  # Call the parent class (Sprite) constructor
         self.the_game = the_game
 
-        self.original_image = pygame.image.load(filename)
+        self.filename = filename
+        self.original_image = pygame.image.load(self.filename)
         self.image = self.original_image
         self.rect = self.image.get_rect()
-        self.rect.center = self.centre_of_cell(position)
-
-        # Test if it's valid to create this piece here
-        if not self.can_be_placed_here(self.centre_of_cell(position)):
-            raise ValueError( "Road cannot be placed here." )
+        self.rect.center = position
 
         self.orientation = orientation  # Degrees anti-clockwise from -y (Up or North)
-        self.exits = exits.upper().split().sort() # The list of directions out from (or into) which another tile can come (or go).
+        self.exits = exits
+        self.exitList = exits.upper().split().sort() # The list of directions out from (or into) which another tile can come (or go).
 
         # Add this object to the objects to draw
         self.the_game.objects_to_draw.add(self)
 
-    def move(self,position,direction_to_face):
-        self.rect.center = self.centre_of_cell(position)
-        self.rotate_to_face_direction(direction_to_face)
+    def move(self,position,direction_to_face=None):
+        self.rect.center = position
+        if direction_to_face:
+            self.rotate_to_face_direction(direction_to_face)
 
     def centre_of_cell(self, position):
         return (int(position[0] / self.size) * self.size + self.size/2, int(position[1] / self.size) * self.size + self.size/2)

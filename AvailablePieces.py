@@ -48,3 +48,22 @@ class AvailablePieces(pygame.sprite.Sprite):
                         self.center[1] ),
                     0,
                     self.the_game.roads[randIndex].exits) )
+
+    def mouse_click_can_start_dragging(self,position):
+        # Returns True if a mouse position is over an available piece.
+
+        # If click is outside the available pieces area entirely, return False. (Quicker than next loop's failure mode.)
+        if not self.rect.collidepoint( position ):
+            return (False, None)
+
+        for index, piece in enumerate(self.pieces):
+            if piece.rect.collidepoint( position ):
+                self.remove_piece_and_bubble_down_remaining(index,piece)
+                return (True, piece)
+        return (False,None)
+
+    def remove_piece_and_bubble_down_remaining(self,index,piece):
+        for i in range(index+1,len(self.pieces)):
+            self.pieces[i].rect[0] -= (AvailablePiece.AvailablePiece.size + self.spacing) # Shift each other piece leftwards by one piece width and one spacing interval.
+        self.pieces.remove(piece) # Finally, remove the dragged piece from the list entirely.
+        piece.kill() # and kill its sprite.
