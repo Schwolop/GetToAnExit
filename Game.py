@@ -28,7 +28,8 @@ class Game:
         self.mouseJustWentUp = False
         pygame.display.set_caption(self.title)
 
-        self.spawn_new_piece_time = 500 # Time (ms) before a new piece is spawned.
+        self.timer_tick_period = 10
+        self.spawn_new_piece_time = 1000 # Time (ms) before a new piece is spawned.
         self.last_spawn_new_piece_time = pygame.time.get_ticks()
 
         self.road = collections.namedtuple('road','filename exits')
@@ -52,7 +53,7 @@ class Game:
             self.resolution[1]-board_ypos]) # Height
 
         # Create timer tick.
-        pygame.time.set_timer(Game.TIMER_TICK, 10)
+        pygame.time.set_timer(Game.TIMER_TICK, self.timer_tick_period)
 
     def run_loop(self):
         self.process_events()
@@ -112,6 +113,10 @@ class Game:
         self.fps_clock.tick(self.desired_frame_rate)
 
     def do_timer_tick(self):
+        # On every tick...
+        self.available_pieces.increment_progess_bar(1)
+
+        # After X seconds since the last specific event...
         if pygame.time.get_ticks() - self.last_spawn_new_piece_time > self.spawn_new_piece_time:
             try:
                 pygame.event.post( pygame.event.Event( Game.GAME_EVENT, {'subtype':Game.GENERATE_NEW_PIECE} ) )

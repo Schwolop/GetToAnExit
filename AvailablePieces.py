@@ -14,8 +14,14 @@ class AvailablePieces(pygame.sprite.Sprite):
         self.spacing = 2
         self.center = ( int(self.the_game.resolution[0]/2), int(0 + self.border + RoadPiece.RoadPiece.size/2) )
         self.top_left = ( int(self.center[0] - (RoadPiece.RoadPiece.size * self.maximum_pieces/2) - self.spacing/2 - ((self.maximum_pieces/2-1) * self.spacing)), self.border)
+        self.progress_bar_height = 10
+        self.progress_count_towards_new_piece = 0
+        self.progress_bar_increments = self.the_game.spawn_new_piece_time / self.the_game.timer_tick_period
+
+        # Sprite atributes
         self.rect = pygame.Rect( *self.calculate_rect_bounds() )
         self.image = pygame.Surface(self.rect.size)
+
         # Add this object to the objects to draw
         self.the_game.objects_to_draw.add(self)
 
@@ -24,13 +30,17 @@ class AvailablePieces(pygame.sprite.Sprite):
     def update(self):
         # Recreate self.image and self.rect given current content.
         self.rect = pygame.Rect( *self.calculate_rect_bounds() )
-        pygame.draw.rect(self.image, (255,0,0), (0,0,self.rect.width,self.rect.height), self.spacing)
+        pygame.draw.rect(self.image, (255,0,0), (0,0,self.rect.width,self.rect.height - self.progress_bar_height), 1)
+
+        # Draw progress bar (left in blue, right in black)
+        pygame.draw.rect(self.image, (0,0,255) if len(self.pieces)<self.maximum_pieces else (255,0,0), (0,self.rect.height - self.progress_bar_height,self.rect.width*(self.progress_count_towards_new_piece/self.progress_bar_increments),self.progress_bar_height), 0)
+        pygame.draw.rect(self.image, (0,0,0), (self.rect.width*(self.progress_count_towards_new_piece/self.progress_bar_increments),self.rect.height - self.progress_bar_height,self.rect.width*(1.0-(self.progress_count_towards_new_piece/self.progress_bar_increments)),self.progress_bar_height), 0)
 
     def calculate_rect_bounds(self):
         return [ self.top_left[0] - self.spacing,
                  self.top_left[1] - self.spacing,
                  (self.center[0]-self.top_left[0])*2 + self.spacing*2,
-                 (self.center[1]-self.top_left[1])*2 + self.spacing*2]
+                 (self.center[1]-self.top_left[1])*2 + self.spacing*2 + self.progress_bar_height]
 
     def try_generate_new_piece(self):
         num_pieces = len(self.pieces)
@@ -48,6 +58,7 @@ class AvailablePieces(pygame.sprite.Sprite):
                         self.center[1] ),
                     0,
                     self.the_game.roads[randIndex].exits) )
+            self.progress_count_towards_new_piece = 0
 
     def mouse_click_can_start_dragging(self,position):
         # Returns True if a mouse position is over an available piece.
@@ -67,3 +78,6 @@ class AvailablePieces(pygame.sprite.Sprite):
             self.pieces[i].rect[0] -= (AvailablePiece.AvailablePiece.size + self.spacing) # Shift each other piece leftwards by one piece width and one spacing interval.
         self.pieces.remove(piece) # Finally, remove the dragged piece from the list entirely.
         piece.kill() # and kill its sprite.
+
+    def increment_progess_bar(self,amount):
+        self.progress_count_towards_new_piece += amount
