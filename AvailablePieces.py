@@ -57,22 +57,43 @@ class AvailablePieces(pygame.sprite.Sprite):
                     self.the_game.roads[randIndex].filename,
                     (   self.top_left[0] + (AvailablePiece.AvailablePiece.size * (num_pieces+0.5)) + (self.spacing * num_pieces),
                         self.center[1] ),
-                    0,
+                    0, # TODO: Randomise orientation.
                     self.the_game.roads[randIndex].exits) )
             self.progress_count_towards_new_piece = 0
+
+    def try_to_return_piece(self,piece,index):
+        num_pieces = len(self.pieces)
+        if num_pieces >= self.maximum_pieces:
+            print("cannot return piece as available_pieces is now full")
+            pygame.event.post( pygame.event.Event( Game.Game.GAME_EVENT, {'subtype':Game.Game.FAILED_TO_RETURN_PIECE} ) )
+        else:
+            print("returning piece #"+str(index))
+            # Re-create and position the returned piece.
+            returned_piece = AvailablePiece.AvailablePiece(
+                self.the_game,
+                piece.filename,
+                (   self.top_left[0] + (AvailablePiece.AvailablePiece.size * (index+0.5)) + (self.spacing * index),
+                    self.center[1] ), # Re-calculate position, given index.
+                piece.orientation,
+                piece.exits)
+            # Shift each other piece rightwards by one piece width and one spacing interval.
+            for i in range(index,len(self.pieces)): # NB: This includes 'index' since what will become index+1 was shifted left when this piece was removed.
+                self.pieces[i].rect[0] += (AvailablePiece.AvailablePiece.size + self.spacing)
+            # Insert the newly created 'returned_piece' correctly into the list.
+            self.pieces.insert(index,returned_piece)
 
     def mouse_click_can_start_dragging(self,position):
         # Returns True if a mouse position is over an available piece.
 
         # If click is outside the available pieces area entirely, return False. (Quicker than next loop's failure mode.)
         if not self.rect.collidepoint( position ):
-            return (False, None)
+            return (False, None, -1)
 
         for index, piece in enumerate(self.pieces):
             if piece.rect.collidepoint( position ):
                 self.remove_piece_and_bubble_down_remaining(index,piece)
-                return (True, piece)
-        return (False,None)
+                return (True, piece, index)
+        return (False,None, -1)
 
     def remove_piece_and_bubble_down_remaining(self,index,piece):
         for i in range(index+1,len(self.pieces)):

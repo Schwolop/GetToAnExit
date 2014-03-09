@@ -15,6 +15,7 @@ class Game:
     GAME_EVENT = USEREVENT+2
     GENERATE_NEW_PIECE = 1
     EXCESS_PIECES_CREATED = 2
+    FAILED_TO_RETURN_PIECE = 3
     def __init__(self):
         pygame.init()
         self.resolution = (640,480)
@@ -43,6 +44,7 @@ class Game:
 
         self.objects_to_draw = pygame.sprite.LayeredUpdates()
         self.beingDraggedPiece = None
+        self.beingDraggedIndex = -1
         self.available_pieces = AvailablePieces.AvailablePieces(self)
         board_ypos = ( int(self.available_pieces.rect.height / RoadPiece.RoadPiece.size)+1 ) * RoadPiece.RoadPiece.size # Ensure is a multiple of 32, and further down than available pieces.
         self.board = Board.Board(self, [ # Bounds of the board are everything but the available pieces area.
@@ -58,9 +60,10 @@ class Game:
         self.process_events()
         # Game logic goes here...
         if self.mouseJustWentDown:
-            (result,pieceToBeDragged) = self.available_pieces.mouse_click_can_start_dragging(self.currentMousePos)
+            (result,pieceToBeDragged,index) = self.available_pieces.mouse_click_can_start_dragging(self.currentMousePos)
             if result:
                 # Create a BeingDraggedPiece that follows the mouse, and takes other parameters from the 'pieceToBeDragged'.
+                self.beingDraggedIndex = index
                 self.beingDraggedPiece = BeingDraggedPiece.BeingDraggedPiece(
                     self,
                     pieceToBeDragged.filename,
@@ -72,11 +75,14 @@ class Game:
             if self.beingDraggedPiece:
                 retval = self.board.try_to_add_new_piece( self.beingDraggedPiece.filename,self.currentMousePos,self.beingDraggedPiece.orientation,self.beingDraggedPiece.exits )
                 self.beingDraggedPiece.kill()
-                self.beingDraggedPiece = None
                 if retval:
                     print("Piece added successfully.")
                 else:
-                    print("Piece could not be added here. Return it to the available pieces (or end game if full).")
+                    print("Piece could not be added here. Attempting to return it to the available pieces.")
+                    self.available_pieces.try_to_return_piece( self.beingDraggedPiece, self.beingDraggedIndex )
+                # Finally, destroy the Game's cache of the dragged piece and its index.
+                self.beingDraggedPiece = None
+                self.beingDraggedIndex = -1
         if self.mouseIsDown:
             if self.beingDraggedPiece:
                 self.beingDraggedPiece.move(self.currentMousePos)
