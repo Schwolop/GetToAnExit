@@ -70,7 +70,13 @@ class Game:
                 self.objects_to_draw.add(self.beingDraggedPiece)
         if self.mouseJustWentUp:
             if self.beingDraggedPiece:
+                retval = self.board.try_to_add_new_piece( self.beingDraggedPiece.filename,self.currentMousePos,self.beingDraggedPiece.orientation,self.beingDraggedPiece.exits )
                 self.beingDraggedPiece.kill()
+                self.beingDraggedPiece = None
+                if retval:
+                    print("Piece added successfully.")
+                else:
+                    print("Piece could not be added here. Return it to the available pieces (or end game if full).")
         if self.mouseIsDown:
             if self.beingDraggedPiece:
                 self.beingDraggedPiece.move(self.currentMousePos)
