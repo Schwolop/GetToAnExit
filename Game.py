@@ -2,6 +2,7 @@ import pygame
 import sys
 from pygame.locals import *
 import collections
+import os
 
 import RoadPiece
 import AvailablePieces

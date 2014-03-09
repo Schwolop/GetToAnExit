@@ -1,6 +1,8 @@
 import pygame
 
-import Game
+import BoardPiece
+import RoadPiece
+
 
 class Board(pygame.sprite.Sprite):
     def __init__(self, the_game, bounds):

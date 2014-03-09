@@ -1,6 +1,5 @@
-import pygame
-
 import RoadPiece
+
 
 class BoardPiece(RoadPiece.RoadPiece):
     def __init__(self, the_game, filename, position, orientation, exits):

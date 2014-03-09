@@ -5,6 +5,7 @@ import Game
 import RoadPiece
 import AvailablePiece
 
+
 class AvailablePieces(pygame.sprite.Sprite):
     def __init__(self,the_game):
         pygame.sprite.Sprite.__init__(self)  # Call the parent class (Sprite) constructor
