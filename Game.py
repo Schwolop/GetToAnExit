@@ -1,14 +1,13 @@
 import pygame
 import sys
-import random
 from pygame.locals import *
 import collections
 
 import RoadPiece
 import AvailablePieces
 import BeingDraggedPiece
-import BoardPiece
 import Board
+
 
 class Game:
     TIMER_TICK = USEREVENT+1
@@ -34,13 +33,12 @@ class Game:
 
         self.road = collections.namedtuple('road','filename exits')
         self.roads = [
-            self.road("straight.png", 'NS'),
-            self.road("turnLeft.png", 'SW'),
-            self.road("turnRight.png", 'SE'),
-            self.road("teeJunction.png", 'SEW'),
-            self.road("crossJunction.png", 'NEWS')
+            self.road(os.path.join("resources","straight.png"), 'NS'),
+            self.road(os.path.join("resources","turnLeft.png"), 'SW'),
+            self.road(os.path.join("resources","turnRight.png"), 'SE'),
+            self.road(os.path.join("resources","teeJunction.png"), 'SEW'),
+            self.road(os.path.join("resources","crossJunction.png"), 'NEWS')
         ]
-        self.roadPieces = []
 
         self.objects_to_draw = pygame.sprite.LayeredUpdates()
         self.beingDraggedPiece = None
