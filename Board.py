@@ -13,9 +13,9 @@ class Board(pygame.sprite.Sprite):
         self.image = pygame.Surface(self.rect.size)
 
         # Calculate size of board, by getting cell for bottom-right co-ordinate.
-        self.bottom_right_cell = self.pixel_position_to_grid_cell(self.rect.bottomright)
+        self.num_cells = self.pixel_position_to_grid_cell(self.rect.bottomright)
         # Create board as 2d-list, x then y and zero-indexed
-        self.board = [[None for y in range(self.bottom_right_cell[1])] for x in range(self.bottom_right_cell[0])]
+        self.board = [[None for y in range(self.num_cells[1])] for x in range(self.num_cells[0])]
 
         # Add this object to the objects to draw
         self.the_game.objects_to_draw.add(self)
@@ -58,7 +58,10 @@ class Board(pygame.sprite.Sprite):
 
     def get_neighbouring_grid_cells(self,grid_cell):
         x,y = grid_cell
-        xLim,yLim = self.bottom_right_cell
+        xLim,yLim = self.bottom_right_cell()
         neighbours = [(x-1,y),(x+1,y),(x,y-1),(x,y+1)]
         # Only return neighbours who lie within the board's bounds
         return [c for c in neighbours if c[0] >= 0 and c[0] <= xLim and c[1] >= 0 and c[1] <= yLim]
+
+    def bottom_right_cell(self):
+        return (self.num_cells[0]-1, self.num_cells[1]-1)
