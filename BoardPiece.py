@@ -9,10 +9,6 @@ class BoardPiece(RoadPiece.RoadPiece):
         # Centre position to a cell
         self.rect.center = self.centre_of_cell(position)
 
-        # Test if it's valid to create this piece here
-        if not self.can_be_placed_here(self.centre_of_cell(position)):
-            raise ValueError( "Road cannot be placed here." )
-
     def move(self,position,direction_to_face):
         # Do not call base-class, instead position centred within nearest cell.
         self.rect.center = self.centre_of_cell(position)

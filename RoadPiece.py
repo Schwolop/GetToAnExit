@@ -29,16 +29,6 @@ class RoadPiece(pygame.sprite.Sprite):
     def centre_of_cell(self, position):
         return (int(position[0] / self.size) * self.size + self.size/2, int(position[1] / self.size) * self.size + self.size/2)
 
-    def is_connected_to(self, other):
-        # returns true if self and other are connected by a pair of exits, given their positions.
-        return True
-
-    def can_be_placed_here(self, position):
-        # returns true if it is valid to place this piece here (meaning the position/orientation held by self)
-        if self.the_game.board.rect.collidepoint( position ):
-            return True
-        return False
-
     def rotate_to_face_direction(self,direction_to_face):
         turns = {'N':0,'E':3,'S':2,'W':1} # Number of 90d turns anti-clockwise to make.
         direction_to_face = direction_to_face.upper()

@@ -20,7 +20,7 @@ class MockGame:
 
 
 class Test_Board(unittest.TestCase):
-
+    testPieceFilename = os.path.join("tests","test_piece.png")
     def setUp(self):
         self.the_game = MockGame()
         self.board = self.the_game.board
@@ -36,22 +36,22 @@ class Test_Board(unittest.TestCase):
 
     def test_try_to_add_new_piece(self):
         # Adding pieces in each corner should work.
-        self.assertTrue(self.board.try_to_add_new_piece(os.path.join("tests","test_piece.png"), self.board.rect.topleft, 0, ""))
-        self.assertTrue(self.board.try_to_add_new_piece(os.path.join("tests","test_piece.png"),
+        self.assertTrue(self.board.try_to_add_new_piece(self.testPieceFilename, self.board.rect.topleft, 0, ""))
+        self.assertTrue(self.board.try_to_add_new_piece(self.testPieceFilename,
                         (self.board.rect.right-0.0001,self.board.rect.bottom-0.0001), 0, "")) # Absolute bottom-right
                         # is not in bounds, but infinitesimally up-left-wards of it is.
 
         # Adding a piece over another piece should not work.
-        self.assertFalse(self.board.try_to_add_new_piece(os.path.join("tests","test_piece.png"), self.board.rect.topleft, 0, ""))
+        self.assertFalse(self.board.try_to_add_new_piece(self.testPieceFilename, self.board.rect.topleft, 0, ""))
 
     def test_get_piece_in_grid_cell(self):
         # Getting a non-existant piece returns None.
         self.assertIsNone(self.board.get_piece_in_grid_cell((0,0)))
 
         # Add and fetch a piece returns the piece.
-        self.assertTrue(self.board.try_to_add_new_piece(os.path.join("tests","test_piece.png"), self.board.rect.topleft, 0, ""))
+        self.assertTrue(self.board.try_to_add_new_piece(self.testPieceFilename, self.board.rect.topleft, 0, ""))
         self.assertIsNotNone(self.board.get_piece_in_grid_cell((0,0)))
-        self.assertTrue( self.board.get_piece_in_grid_cell((0,0)).filename, os.path.join("tests","test_piece.png") ) # Check filename matches.
+        self.assertTrue( self.board.get_piece_in_grid_cell((0,0)).filename, self.testPieceFilename ) # Check filename matches.
 
     def test_get_neighbouring_grid_cells(self):
         # NB: Don't care about order, hence convert all lists to set first.
@@ -60,6 +60,20 @@ class Test_Board(unittest.TestCase):
         xLim,yLim = self.board.bottom_right_cell()
         self.assertEqual( set(self.board.get_neighbouring_grid_cells((xLim,yLim))), set([(xLim-1,yLim),(xLim,yLim-1)]) )
             # Not E or S
+
+    def test_get_common_wall(self):
+        self.assertEqual( "E", self.board.get_common_wall(# Second should be east of first.
+            BoardPiece.BoardPiece( self.the_game, self.testPieceFilename, (0,0), 0, "", (1,1)),
+            BoardPiece.BoardPiece( self.the_game, self.testPieceFilename, (0,0), 0, "", (2,1)) ) )
+        self.assertEqual( "N", self.board.get_common_wall( # Second should be north of first.
+            BoardPiece.BoardPiece( self.the_game, self.testPieceFilename, (0,0), 0, "", (1,1)),
+            BoardPiece.BoardPiece( self.the_game, self.testPieceFilename, (0,0), 0, "", (1,0)) ) )
+        self.assertRaises( self.board.get_common_wall( # Same grid cell should throw exception.
+            BoardPiece.BoardPiece( self.the_game, self.testPieceFilename, (0,0), 0, "", (1,1)),
+            BoardPiece.BoardPiece( self.the_game, self.testPieceFilename, (0,0), 0, "", (1,1)) ) )
+        self.assertIsNone( self.board.get_common_wall( # Unconnected grid cells should return none.
+            BoardPiece.BoardPiece( self.the_game, self.testPieceFilename, (0,0), 0, "", (1,1)),
+            BoardPiece.BoardPiece( self.the_game, self.testPieceFilename, (0,0), 0, "", (1,3)) ) )
 
 if __name__ == '__main__':
     unittest.main()
