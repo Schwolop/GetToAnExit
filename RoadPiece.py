@@ -15,7 +15,8 @@ class RoadPiece(pygame.sprite.Sprite):
 
         self.orientation = orientation  # Degrees anti-clockwise from -y (Up or North)
         self.exits = exits
-        self.exitList = exits.upper().split().sort() # The list of directions out from (or into) which another tile can come (or go).
+        self.exit_list = list(exits.upper())# The list of directions out from (or into) which another tile can come (or go).
+        self.exit_list.sort()
 
         # Add this object to the objects to draw
         self.the_game.objects_to_draw.add(self)
@@ -43,3 +44,23 @@ class RoadPiece(pygame.sprite.Sprite):
         direction_to_face = direction_to_face.upper()
         self.orientation = 90*turns[direction_to_face]
         self.image = pygame.transform.rotate( self.original_image, self.orientation )
+        #TODO: Rotate exits too.
+
+    def reverse_exit_list(self):
+        reversed_exit_list = []
+        for exit in self.exit_list:
+            if exit == "N":
+                reversed_exit_list.append( "S" )
+            elif exit == "E":
+                reversed_exit_list.append( "W" )
+            elif exit == "S":
+                reversed_exit_list.append( "N" )
+            elif exit == "W":
+                reversed_exit_list.append( "E" )
+        reversed_exit_list.sort()
+        return reversed_exit_list
+
+    def can_pieces_mate(self,other):
+        # Returns true if this and another piece have exits that could mate (if the pieces were touching along this edge).
+        reversed_exit_list = self.reverse_exit_list()
+        return any((True for exit in reversed_exit_list if exit in other.exits))
