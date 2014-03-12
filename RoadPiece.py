@@ -15,11 +15,16 @@ class RoadPiece(pygame.sprite.Sprite):
 
         self.orientation = orientation  # Degrees anti-clockwise from -y (Up or North)
         self.exits = exits
-        self.exit_list = list(exits.upper())# The list of directions out from (or into) which another tile can come (or go).
-        self.exit_list.sort()
+        self.exit_list = RoadPiece.exit_string_to_list(self.exits)
 
         # Add this object to the objects to draw
         self.the_game.objects_to_draw.add(self)
+
+    @staticmethod
+    def exit_string_to_list(exits):
+        exit_list = list(exits.upper())# The list of directions out from (or into) which another tile can come (or go).
+        exit_list.sort()
+        return exit_list
 
     def move(self,position,direction_to_face=None):
         self.rect.center = position

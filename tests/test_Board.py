@@ -53,27 +53,19 @@ class Test_Board(unittest.TestCase):
         self.assertIsNotNone(self.board.get_piece_in_grid_cell((0,0)))
         self.assertTrue( self.board.get_piece_in_grid_cell((0,0)).filename, self.testPieceFilename ) # Check filename matches.
 
-    def test_get_neighbouring_grid_cells(self):
+    def test_get_neighbouring_grid_cell_locations(self):
         # NB: Don't care about order, hence convert all lists to set first.
-        self.assertEqual( set(self.board.get_neighbouring_grid_cells((2,2))), set([(3,2),(1,2),(2,1),(2,3)]) ) # All 4
-        self.assertEqual( set(self.board.get_neighbouring_grid_cells((0,0))), set([(0,1),(1,0)]) ) # Not N or W.
+        self.assertEqual( set(self.board.get_neighbouring_grid_cell_locations((2,2))), set([(3,2),(1,2),(2,1),(2,3)]) ) # All 4
+        self.assertEqual( set(self.board.get_neighbouring_grid_cell_locations((0,0))), set([(0,1),(1,0)]) ) # Not N or W.
         xLim,yLim = self.board.bottom_right_cell()
-        self.assertEqual( set(self.board.get_neighbouring_grid_cells((xLim,yLim))), set([(xLim-1,yLim),(xLim,yLim-1)]) )
+        self.assertEqual( set(self.board.get_neighbouring_grid_cell_locations((xLim,yLim))), set([(xLim-1,yLim),(xLim,yLim-1)]) )
             # Not E or S
 
     def test_get_common_wall(self):
-        self.assertEqual( "E", self.board.get_common_wall(# Second should be east of first.
-            BoardPiece.BoardPiece( self.the_game, self.testPieceFilename, (0,0), 0, "", (1,1)),
-            BoardPiece.BoardPiece( self.the_game, self.testPieceFilename, (0,0), 0, "", (2,1)) ) )
-        self.assertEqual( "N", self.board.get_common_wall( # Second should be north of first.
-            BoardPiece.BoardPiece( self.the_game, self.testPieceFilename, (0,0), 0, "", (1,1)),
-            BoardPiece.BoardPiece( self.the_game, self.testPieceFilename, (0,0), 0, "", (1,0)) ) )
-        self.assertRaises( self.board.get_common_wall( # Same grid cell should throw exception.
-            BoardPiece.BoardPiece( self.the_game, self.testPieceFilename, (0,0), 0, "", (1,1)),
-            BoardPiece.BoardPiece( self.the_game, self.testPieceFilename, (0,0), 0, "", (1,1)) ) )
-        self.assertIsNone( self.board.get_common_wall( # Unconnected grid cells should return none.
-            BoardPiece.BoardPiece( self.the_game, self.testPieceFilename, (0,0), 0, "", (1,1)),
-            BoardPiece.BoardPiece( self.the_game, self.testPieceFilename, (0,0), 0, "", (1,3)) ) )
+        self.assertEqual( "E", self.board.get_common_wall( (1,1), (2,1) ) ) # Second should be east of first.
+        self.assertEqual( "N", self.board.get_common_wall( (1,1), (1,0) ) ) # Second should be north of first.
+        self.assertRaises(     self.board.get_common_wall( (1,1), (1,1) ) ) # Same grid cell should throw exception.
+        self.assertIsNone(     self.board.get_common_wall( (1,1), (1,3) ) ) # Unconnected grid cells should return none.
 
 if __name__ == '__main__':
     unittest.main()
