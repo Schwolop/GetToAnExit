@@ -39,21 +39,35 @@ class RoadPiece(pygame.sprite.Sprite):
         direction_to_face = direction_to_face.upper()
         self.orientation = 90*turns[direction_to_face]
         self.image = pygame.transform.rotate( self.original_image, self.orientation )
-        #TODO: Rotate exits too.
+        # Rotate the exits too.
+        for i in range(turns[direction_to_face]):
+            self.rotate_exit_list_once_anticlockwise()
 
     def reverse_exit_list(self):
-        reversed_exit_list = []
-        for exit in self.exit_list:
+        for i,exit in enumerate(self.exit_list):
             if exit == "N":
-                reversed_exit_list.append( "S" )
+                self.exit_list[i]="S"
             elif exit == "E":
-                reversed_exit_list.append( "W" )
+                self.exit_list[i]="W"
             elif exit == "S":
-                reversed_exit_list.append( "N" )
+                self.exit_list[i]="N"
             elif exit == "W":
-                reversed_exit_list.append( "E" )
-        reversed_exit_list.sort()
-        return reversed_exit_list
+                self.exit_list[i]="E"
+        self.exit_list.sort()
+        return self.exit_list
+
+    def rotate_exit_list_once_anticlockwise(self):
+        for i,exit in enumerate(self.exit_list):
+            if exit == "N":
+                self.exit_list[i]="W"
+            elif exit == "E":
+                self.exit_list[i]="N"
+            elif exit == "S":
+                self.exit_list[i]="E"
+            elif exit == "W":
+                self.exit_list[i]="S"
+        self.exit_list.sort()
+        return self.exit_list
 
     def can_pieces_mate(self,other):
         # Returns true if this and another piece have exits that could mate (if the pieces were touching along this edge).
