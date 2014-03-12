@@ -69,11 +69,11 @@ class Game:
                     pieceToBeDragged.filename,
                     self.currentMousePos,
                     pieceToBeDragged.orientation,
-                    pieceToBeDragged.exits)
+                    pieceToBeDragged.north_oriented_exits)
                 self.objects_to_draw.add(self.beingDraggedPiece)
         if self.mouseJustWentUp:
             if self.beingDraggedPiece:
-                retval = self.board.try_to_add_new_piece( self.beingDraggedPiece.filename,self.currentMousePos,self.beingDraggedPiece.orientation,self.beingDraggedPiece.exits )
+                retval = self.board.try_to_add_new_piece( self.beingDraggedPiece.filename,self.currentMousePos,self.beingDraggedPiece.orientation,self.beingDraggedPiece.north_oriented_exits )
                 self.beingDraggedPiece.kill()
                 if retval:
                     print("Piece added successfully.")

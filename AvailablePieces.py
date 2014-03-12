@@ -57,8 +57,8 @@ class AvailablePieces(pygame.sprite.Sprite):
                     self.the_game.roads[randIndex].filename,
                     (   self.top_left[0] + (AvailablePiece.AvailablePiece.size * (num_pieces+0.5)) + (self.spacing * num_pieces),
                         self.center[1] ),
-                    0, # TODO: Randomise orientation.
-                    self.the_game.roads[randIndex].exits) )
+                    90*random.randrange(0,4), # Randomise orientation from [0,90,180,270]
+                    self.the_game.roads[randIndex].exits) ) # These are inherently north-oriented-exits
             self.progress_count_towards_new_piece = 0
 
     def try_to_return_piece(self,piece,index):
@@ -75,7 +75,7 @@ class AvailablePieces(pygame.sprite.Sprite):
                 (   self.top_left[0] + (AvailablePiece.AvailablePiece.size * (index+0.5)) + (self.spacing * index),
                     self.center[1] ), # Re-calculate position, given index.
                 piece.orientation,
-                piece.exits)
+                piece.north_oriented_exits)
             # Shift each other piece rightwards by one piece width and one spacing interval.
             for i in range(index,len(self.pieces)): # NB: This includes 'index' since what will become index+1 was shifted left when this piece was removed.
                 self.pieces[i].rect[0] += (AvailablePiece.AvailablePiece.size + self.spacing)

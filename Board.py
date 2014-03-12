@@ -24,9 +24,10 @@ class Board(pygame.sprite.Sprite):
         # Recreate self.image given current content.
         pygame.draw.rect(self.image, (0,255,0), (0,0,self.rect.width,self.rect.height), 2)
 
-    def try_to_add_new_piece(self, filename, position, orientation, exits):
+    def try_to_add_new_piece(self, filename, position, orientation, north_oriented_exits):
         grid_cell = self.pixel_position_to_grid_cell(position)
-        exit_list = RoadPiece.RoadPiece.exit_string_to_list(exits)
+        north_oriented_exit_list = RoadPiece.RoadPiece.exit_string_to_list(north_oriented_exits) # Turn the exit string into a list.
+        exit_list = RoadPiece.RoadPiece.rotate_north_oriented_exit_list(north_oriented_exit_list,orientation)
         if not grid_cell:
             print("Position is outside bounds of Board.")
             return False
@@ -72,7 +73,7 @@ class Board(pygame.sprite.Sprite):
                 return False
 
         try:
-            self.board[x][y] = BoardPiece.BoardPiece(self.the_game, filename, position, orientation, exits, grid_cell)
+            self.board[x][y] = BoardPiece.BoardPiece(self.the_game, filename, position, orientation, north_oriented_exits, grid_cell)
             return True
         except Exception as e:
             print("Could not add board piece at ("+str(x)+",",str(y)+"), error details: "+str(e))
