@@ -93,4 +93,4 @@ class RoadPiece(pygame.sprite.Sprite):
         # along this edge). This function uses each piece's _current_ rotation (hence 'exits', not
         # 'north_oriented_exits', but doesn't look at their current positions.
         reversed_exit_list = self.reverse_exit_list()
-        return any((True for exit in reversed_exit_list if exit in other.exits))
+        return any((True for exit in reversed_exit_list if exit in other.exit_list))

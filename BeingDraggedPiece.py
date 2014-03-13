@@ -1,3 +1,5 @@
+import pygame
+
 import RoadPiece
         
 
@@ -11,3 +13,10 @@ class BeingDraggedPiece(RoadPiece.RoadPiece):
 
         # Rotate piece.
         self.rotate_to_face_direction(["N","W","S","E"][int(orientation_from_north/90)])
+
+    def move(self,position):
+        RoadPiece.RoadPiece.move(self,position) # Call base class.
+        # Update highlighted boundary.
+        retVal, _ = self.the_game.board.can_piece_be_placed_here(self.filename, self.rect.center, self.orientation, self.north_oriented_exits)
+        colour = (0,255,0) if retVal else (255,0,0)
+        pygame.draw.rect(self.image, colour, (0,0,self.rect.width,self.rect.height), 3)

@@ -24,59 +24,65 @@ class Board(pygame.sprite.Sprite):
         # Recreate self.image given current content.
         pygame.draw.rect(self.image, (0,255,0), (0,0,self.rect.width,self.rect.height), 2)
 
-    def try_to_add_new_piece(self, filename, position, orientation, north_oriented_exits):
+    def can_piece_be_placed_here(self, filename, position, orientation, north_oriented_exits):
         grid_cell = self.pixel_position_to_grid_cell(position)
         north_oriented_exit_list = RoadPiece.RoadPiece.exit_string_to_list(north_oriented_exits) # Turn the exit string into a list.
         exit_list = RoadPiece.RoadPiece.rotate_north_oriented_exit_list(north_oriented_exit_list,orientation)
         if not grid_cell:
-            print("Position is outside bounds of Board.")
-            return False
+            return (False, "Position is outside bounds of Board.")
 
         # Check if placement cell is already occupied
         x,y = grid_cell
         if self.board[x][y]: # If this cell is occupied, return False
-            print("Board is already occupied at ("+str(x)+",",str(y)+").")
-            return False
+            return (False, "Board is already occupied at ("+str(x)+","+str(y)+").")
 
         # Now check whether this piece can mate with all neighbours.
         # For each neighbour, determine the direction in which it lies from the new piece.
         # If the new piece has an exit in that direction, does the neighbour have the opposite exit to mate?
         # Else, if the new piece has no exit in that direction, do the neighbour also have no exit in the opposite
         # direction?
-        for neighbour in self.get_neighbouring_pieces_locations(grid_cell):
+        neighbours = self.get_neighbouring_pieces_locations(grid_cell)
+        if not neighbours or len(neighbours)==0:
+            return (True, "No neighbours, thus piece can be placed here.")
+        for neighbour in neighbours:
             try:
                 common_wall = self.get_common_wall(grid_cell,neighbour)
                 if not common_wall:
-                    print("No common wall between supposed neighbours!")
-                    return False
+                    return (False, "No common wall between supposed neighbours!")
                 else: # As expected, there is a common wall.
                     # If this grid_cell's piece has an exit in this direction, does the neighbour have an opposing exit?
                     nx,ny = neighbour
                     if not self.board[nx][ny]:
-                        print("Supposed neighbour does not actually exist in board's list of pieces.")
-                        return False
+                        return (False, "Supposed neighbour does not actually exist in board's list of pieces.")
                     reversed_neighbour_exits = self.board[nx][ny].reverse_exit_list()
                     if common_wall in exit_list:
                         if common_wall in reversed_neighbour_exits:
-                            pass # It is OK to place the piece here because the common wall has mutual exits.
+                            return (True, "It is OK to place the piece here because the common wall has mutual exits.")
                         else:
-                            print("A neighbouring piece does not have a mating exit with this piece.")
-                            return False
+                            return (False, "A neighbouring piece does not have a mating exit with this piece.")
                     else: # common_wall not in exit_list:
                         if common_wall not in reversed_neighbour_exits:
-                            pass # It is OK to place the piece here because the common wall is closed for both.
+                            return (True, "It is OK to place the piece here because the common wall is closed for both.")
                         else:
-                            print("A neighbouring piece has an exit where this piece has a wall.")
-                            return False
+                            return (False, "A neighbouring piece has an exit where this piece has a wall.")
             except ValueError as e:
-                print("Supposed neighbours are disconnected! Error details: " + str(e))
-                return False
+                return (False, "Supposed neighbours are disconnected! Error details: " + str(e))
+        return (False, "Unreachable code!")
 
-        try:
-            self.board[x][y] = BoardPiece.BoardPiece(self.the_game, filename, position, orientation, north_oriented_exits, grid_cell)
-            return True
-        except Exception as e:
-            print("Could not add board piece at ("+str(x)+",",str(y)+"), error details: "+str(e))
+    def try_to_add_new_piece(self, filename, position, orientation, north_oriented_exits):
+        grid_cell = self.pixel_position_to_grid_cell(position)
+        x,y = grid_cell
+        retVal, msg = self.can_piece_be_placed_here(filename, position, orientation, north_oriented_exits)
+        if retVal:
+            try:
+                self.board[x][y] = BoardPiece.BoardPiece(self.the_game, filename, position, orientation, north_oriented_exits, grid_cell)
+                print(msg)
+                return True
+            except Exception as e:
+                print("Could not add board piece at ("+str(x)+",",str(y)+"), error details: "+str(e))
+                return False
+        else:
+            print("Could not add board piece at ("+str(x)+",",str(y)+"), error details: "+msg)
             return False
 
     def pixel_position_to_grid_cell(self, position):
