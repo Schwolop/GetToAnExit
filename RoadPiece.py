@@ -2,14 +2,14 @@ import pygame
 
 
 class RoadPiece(pygame.sprite.Sprite):
-    size = 32
+    size = 64
     def __init__(self, the_game, filename, position, north_oriented_exits):
         pygame.sprite.Sprite.__init__(self)  # Call the parent class (Sprite) constructor
 
         self.the_game = the_game
 
         self.filename = filename
-        self.original_image = pygame.image.load(self.filename)
+        self.original_image = pygame.transform.scale2x( pygame.image.load(self.filename) )
         self.image = self.original_image
         self.rect = self.image.get_rect()
         self.rect.center = position

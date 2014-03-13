@@ -18,7 +18,7 @@ class Game:
     FAILED_TO_RETURN_PIECE = 3
     def __init__(self):
         pygame.init()
-        self.resolution = (640,480)
+        self.resolution = (1280,960)
         self.fps_clock = pygame.time.Clock()
         self.screen = pygame.display.set_mode(self.resolution, pygame.DOUBLEBUF)
         self.title = "Get To An Exit!"
