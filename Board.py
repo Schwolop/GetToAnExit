@@ -57,23 +57,23 @@ class Board(pygame.sprite.Sprite):
                     reversed_neighbour_exits = self.board[nx][ny].reverse_exit_list()
                     if common_wall in exit_list:
                         if common_wall in reversed_neighbour_exits:
-                            return (True, "It is OK to place the piece here because the common wall has mutual exits.")
+                            continue
                         else:
                             return (False, "A neighbouring piece does not have a mating exit with this piece.")
                     else: # common_wall not in exit_list:
                         if common_wall not in reversed_neighbour_exits:
-                            return (True, "It is OK to place the piece here because the common wall is closed for both.")
+                            continue
                         else:
                             return (False, "A neighbouring piece has an exit where this piece has a wall.")
             except ValueError as e:
                 return (False, "Supposed neighbours are disconnected! Error details: " + str(e))
-        return (False, "Unreachable code!")
+        return (True, "Ok to place piece here.")
 
     def try_to_add_new_piece(self, filename, position, orientation, north_oriented_exits):
-        grid_cell = self.pixel_position_to_grid_cell(position)
-        x,y = grid_cell
         retVal, msg = self.can_piece_be_placed_here(filename, position, orientation, north_oriented_exits)
         if retVal:
+            grid_cell = self.pixel_position_to_grid_cell(position)
+            x,y = grid_cell
             try:
                 self.board[x][y] = BoardPiece.BoardPiece(self.the_game, filename, position, orientation, north_oriented_exits, grid_cell)
                 print(msg)
@@ -82,7 +82,7 @@ class Board(pygame.sprite.Sprite):
                 print("Could not add board piece at ("+str(x)+",",str(y)+"), error details: "+str(e))
                 return False
         else:
-            print("Could not add board piece at ("+str(x)+",",str(y)+"), error details: "+msg)
+            print("Could not add board piece: error details: "+msg)
             return False
 
     def pixel_position_to_grid_cell(self, position):
