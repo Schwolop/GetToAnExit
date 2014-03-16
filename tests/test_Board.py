@@ -9,7 +9,7 @@ import BoardPiece
 class MockSpriteGroup:
     def __init__(self):
         pass
-    def add(self,_):
+    def add(self,_,**kwargs):
         pass
 
 
