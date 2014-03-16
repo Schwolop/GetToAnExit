@@ -46,12 +46,12 @@ class Test_Board(unittest.TestCase):
 
     def test_get_piece_in_grid_cell(self):
         # Getting a non-existant piece returns None.
-        self.assertIsNone(self.board.get_piece_in_grid_cell((0,0)))
+        self.assertIsNone(self.board.get_board_piece((0,0)))
 
         # Add and fetch a piece returns the piece.
         self.assertTrue(self.board.try_to_add_new_piece(self.testPieceFilename, self.board.rect.topleft, 0, ""))
-        self.assertIsNotNone(self.board.get_piece_in_grid_cell((0,0)))
-        self.assertTrue( self.board.get_piece_in_grid_cell((0,0)).filename, self.testPieceFilename ) # Check filename matches.
+        self.assertIsNotNone(self.board.get_board_piece((0,0)))
+        self.assertTrue( self.board.get_board_piece((0,0)).filename, self.testPieceFilename ) # Check filename matches.
 
     def test_get_neighbouring_grid_cell_locations(self):
         # NB: Don't care about order, hence convert all lists to set first.
@@ -66,6 +66,44 @@ class Test_Board(unittest.TestCase):
         self.assertEqual( "N", self.board.get_common_wall( (1,1), (1,0) ) ) # Second should be north of first.
         self.assertRaises( ValueError, self.board.get_common_wall, (1,1), (1,1) ) # Same grid cell should throw exception.
         self.assertIsNone(     self.board.get_common_wall( (1,1), (1,3) ) ) # Unconnected grid cells should return none.
+
+    def test_get_neighbouring_pieces_locations(self):
+        # NB: Don't care about order, hence convert all lists to set first.
+
+        # With only (2,2) in the board, should return empty list.
+        _, n22 = self.board.try_to_add_new_piece(self.testPieceFilename, (64*2,64*2), 0, "", return_grid_cell=True)
+        self.assertEqual( set(self.board.get_neighbouring_pieces_locations((2,2))), set([]) )
+
+        _, n11 = self.board.try_to_add_new_piece(self.testPieceFilename, (64*1,64*1), 0, "", return_grid_cell=True)
+        _, n12 = self.board.try_to_add_new_piece(self.testPieceFilename, (64*1,64*2), 0, "", return_grid_cell=True)
+        _, n13 = self.board.try_to_add_new_piece(self.testPieceFilename, (64*1,64*3), 0, "", return_grid_cell=True)
+        self.assertEqual( set(self.board.get_neighbouring_pieces_locations((2,2))), set([(1,2)]) )
+
+        _, n21 = self.board.try_to_add_new_piece(self.testPieceFilename, (64*2,64*1), 0, "", return_grid_cell=True)
+        _, n23 = self.board.try_to_add_new_piece(self.testPieceFilename, (64*2,64*3), 0, "", return_grid_cell=True)
+        _, n31 = self.board.try_to_add_new_piece(self.testPieceFilename, (64*3,64*1), 0, "", return_grid_cell=True)
+        _, n32 = self.board.try_to_add_new_piece(self.testPieceFilename, (64*3,64*2), 0, "", return_grid_cell=True)
+        _, n33 = self.board.try_to_add_new_piece(self.testPieceFilename, (64*3,64*3), 0, "", return_grid_cell=True)
+        self.assertEqual( set(self.board.get_neighbouring_pieces_locations((2,2))), set([(3,2),(1,2),(2,1),(2,3)]) ) # All 4
+
+    def test_get_connected_pieces_locations(self):
+        # NB: Don't care about order, hence convert all lists to set first.
+
+        # With only (2,2) in the board, should return empty list.
+        _, n22 = self.board.try_to_add_new_piece(self.testPieceFilename, (64*2,64*2), 0, "NS", return_grid_cell=True)
+        self.assertEqual( set(self.board.get_connected_pieces_locations((2,2))), set([]) )
+
+        _, n11 = self.board.try_to_add_new_piece(self.testPieceFilename, (64*1,64*1), 0, "SE", return_grid_cell=True)
+        _, n21 = self.board.try_to_add_new_piece(self.testPieceFilename, (64*2,64*1), 0, "ESW", return_grid_cell=True)
+        _, n31 = self.board.try_to_add_new_piece(self.testPieceFilename, (64*3,64*1), 0, "SW", return_grid_cell=True)
+        self.assertEqual( set(self.board.get_connected_pieces_locations((2,2))), set([(2,1)]) ) # Only N
+
+        _, n12 = self.board.try_to_add_new_piece(self.testPieceFilename, (64*1,64*2), 0, "NS", return_grid_cell=True)
+        _, n13 = self.board.try_to_add_new_piece(self.testPieceFilename, (64*1,64*3), 0, "NE", return_grid_cell=True)
+        _, n23 = self.board.try_to_add_new_piece(self.testPieceFilename, (64*2,64*3), 0, "NEW", return_grid_cell=True)
+        _, n32 = self.board.try_to_add_new_piece(self.testPieceFilename, (64*3,64*2), 0, "NS", return_grid_cell=True)
+        _, n33 = self.board.try_to_add_new_piece(self.testPieceFilename, (64*3,64*3), 0, "NW", return_grid_cell=True)
+        self.assertEqual( set(self.board.get_connected_pieces_locations((2,2))), set([(2,1),(2,3)]) ) # Only N and S
 
     def test_find_pieces_with_free_exits(self):
         # Piece in the middle of nowhere with a north exit should be regarded as unclosed.
@@ -94,8 +132,6 @@ class Test_Board(unittest.TestCase):
         _, n7 = self.board.try_to_add_new_piece(self.testPieceFilename, (64*1,64*2), 0, "NS", return_grid_cell=True)
         _, n8 = self.board.try_to_add_new_piece(self.testPieceFilename, (64*1,64*3), 0, "EN", return_grid_cell=True)
 
-        self.assertEqual( [], self.board.find_all_paths(start,end,[]) ) # Will fail, but will print all paths.
-        #TODO: Fix this so Board.get_connected_pieces_locations() doesn't return invalid connections.
         self.assertEqual( 3, len(self.board.find_all_paths(start,end,[])) ) # Should return three paths
         self.assertIn( [start,n2,end], self.board.find_all_paths(start,end,[]) ) # One should be start->mid->end
 

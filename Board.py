@@ -98,7 +98,7 @@ class Board(pygame.sprite.Sprite):
         return (int((position[0]-self.rect.left) / RoadPiece.RoadPiece.size),
                 int((position[1]-self.rect.top) / RoadPiece.RoadPiece.size))
 
-    def get_piece_in_grid_cell(self,grid_cell):
+    def get_board_piece(self,grid_cell):
         x,y = grid_cell
         if self.board[x][y]: # If this cell is occupied, return the piece
             return self.board[x][y]
@@ -119,7 +119,11 @@ class Board(pygame.sprite.Sprite):
     def get_connected_pieces_locations(self,grid_cell):
         # Filters the output of get_neighbouring_pieces_locations to only those that have a connected exit with this
         # cell.
-        return [c for c in self.get_neighbouring_pieces_locations(grid_cell) if self.board[c[0]][c[1]].can_pieces_mate(self.get_piece_in_grid_cell(grid_cell))]
+        return [c for c in self.get_neighbouring_pieces_locations(grid_cell)
+                if self.get_common_wall(grid_cell,c) in self.get_board_piece(grid_cell).exit_list
+                and self.get_common_wall(grid_cell,c) in self.get_board_piece(c).reverse_exit_list()]
+        # TODO: Work out how to cache the call to self.get_common_wall(grid_cell), and further, work out how to memoize
+        # all the other calls.
 
     def bottom_right_cell(self):
         return (self.num_cells[0]-1, self.num_cells[1]-1)
@@ -151,7 +155,7 @@ class Board(pygame.sprite.Sprite):
             empty_neighbour_locations = [c for c in self.get_neighbouring_grid_cell_locations(grid_cell) if self.board[c[0]][c[1]] is None]
             for missing_neighbour in empty_neighbour_locations:
                 # If the direction of the missing neighbour is an exit direction
-                if self.get_piece_in_grid_cell(grid_cell).get_direction_to_neighbouring_grid_cell(missing_neighbour) in self.get_piece_in_grid_cell(grid_cell).exit_list:
+                if self.get_board_piece(grid_cell).get_direction_to_neighbouring_grid_cell(missing_neighbour) in self.get_board_piece(grid_cell).exit_list:
                     grid_cells_with_free_exits.append(grid_cell)
                     break
         return grid_cells_with_free_exits
