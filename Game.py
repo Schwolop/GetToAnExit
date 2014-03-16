@@ -39,7 +39,8 @@ class Game:
             self.road(os.path.join("resources","turnLeft.png"), 'SW'),
             self.road(os.path.join("resources","turnRight.png"), 'SE'),
             self.road(os.path.join("resources","teeJunction.png"), 'SEW'),
-            self.road(os.path.join("resources","crossJunction.png"), 'NEWS')
+            self.road(os.path.join("resources","crossJunction.png"), 'NEWS'),
+            self.road(os.path.join("resources","culDeSac.png"), 'S')
         ]
 
         self.objects_to_draw = pygame.sprite.LayeredUpdates()
