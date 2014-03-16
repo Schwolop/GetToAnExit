@@ -1,8 +1,20 @@
 import pygame
+import itertools
 
 import BoardPiece
 import RoadPiece
 
+class PathOverlay(pygame.sprite.Sprite):
+    def __init__(self, the_game, bounds):
+        pygame.sprite.Sprite.__init__(self)  # Call the parent class (Sprite) constructor
+        self.the_game = the_game
+
+        self.rect = pygame.Rect( *bounds )
+        self.image = pygame.Surface(self.rect.size)
+        self.image.set_colorkey((0,0,0)) # Black is transparent.
+
+        # Add this object to the objects to draw
+        self.the_game.objects_to_draw.add(self, layer=10) # In front of everything
 
 class Board(pygame.sprite.Sprite):
     def __init__(self, the_game, bounds):
@@ -18,12 +30,21 @@ class Board(pygame.sprite.Sprite):
         self.board = [[None for y in range(self.num_cells[1])] for x in range(self.num_cells[0])]
         self.board_list = [] # Also store as a list of grid_cells.
 
+        self.longest_path = []
+        self.path_overlay = PathOverlay(the_game,bounds)
+
         # Add this object to the objects to draw
-        self.the_game.objects_to_draw.add(self)
+        self.the_game.objects_to_draw.add(self, layer=1) # Behind everything
 
     def update(self):
         # Recreate self.image given current content.
         pygame.draw.rect(self.image, (0,255,0), (0,0,self.rect.width,self.rect.height), 2)
+        pygame.draw.rect(self.path_overlay.image, (0,0,0), self.path_overlay.rect) # Clear the overlay
+        for grid_cell in self.longest_path:                                        # and redraw it from scratch.
+            x,y=grid_cell
+            x*=RoadPiece.RoadPiece.size
+            y*=RoadPiece.RoadPiece.size
+            pygame.draw.rect(self.path_overlay.image, (0,0,255), (x, y, RoadPiece.RoadPiece.size, RoadPiece.RoadPiece.size), 6)
 
     def can_piece_be_placed_here(self, filename, position, orientation, north_oriented_exits):
         grid_cell = self.pixel_position_to_grid_cell(position)
@@ -179,3 +200,30 @@ class Board(pygame.sprite.Sprite):
                 for new_path in new_paths:
                     paths.append(new_path)
         return paths
+
+    def recalculate_longest_path_between_exits(self):
+        # Returns the longest path between pieces with free exits.
+        max_length = 0
+        longest_path = []
+        for first,second in itertools.combinations(self.find_pieces_with_free_exits(),2):
+            paths = self.find_all_paths(first,second)
+            if len(paths) > 0:
+                longest = max(paths, key = lambda path: len(path))
+                if len(longest) > max_length:
+                    longest_path = longest
+                    max_length = len(longest)
+        self.longest_path = longest_path
+
+    def recalculate_longest_path_between_any_pieces(self):
+        # Returns the longest path between any pieces. (This is likely to be slower than a sensible Floyd-Warshall
+        # algorithm or equivalent!)
+        max_length = 0
+        longest_path = []
+        for first,second in itertools.combinations(self.board_list,2):
+            paths = self.find_all_paths(first,second)
+            if len(paths) > 0:
+                longest = max(paths, key = lambda path: len(path))
+                if len(longest) > max_length:
+                    longest_path = longest
+                    max_length = len(longest)
+        self.longest_path = longest_path

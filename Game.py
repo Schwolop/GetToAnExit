@@ -78,6 +78,7 @@ class Game:
                 self.beingDraggedPiece.kill()
                 if retval:
                     print("Piece added successfully.")
+                    self.board.recalculate_longest_path_between_any_pieces()
                 else:
                     print("Piece could not be added here. Attempting to return it to the available pieces.")
                     self.available_pieces.try_to_return_piece( self.beingDraggedPiece, self.beingDraggedIndex )

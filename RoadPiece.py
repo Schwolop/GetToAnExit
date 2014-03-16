@@ -19,7 +19,7 @@ class RoadPiece(pygame.sprite.Sprite):
         self.orientation = 0 # Set to a default value. Subsequent rotations will adjust this.
 
         # Add this object to the objects to draw
-        self.the_game.objects_to_draw.add(self)
+        self.the_game.objects_to_draw.add(self, layer=5)
 
     @staticmethod
     def exit_string_to_list(exits):
