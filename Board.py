@@ -16,6 +16,7 @@ class Board(pygame.sprite.Sprite):
         self.num_cells = self.pixel_position_to_grid_cell(self.rect.bottomright)
         # Create board as 2d-list, x then y and zero-indexed
         self.board = [[None for y in range(self.num_cells[1])] for x in range(self.num_cells[0])]
+        self.board_list = [] # Also store as a list of grid_cells.
 
         # Add this object to the objects to draw
         self.the_game.objects_to_draw.add(self)
@@ -69,14 +70,17 @@ class Board(pygame.sprite.Sprite):
                 return (False, "Supposed neighbours are disconnected! Error details: " + str(e))
         return (True, "Ok to place piece here.")
 
-    def try_to_add_new_piece(self, filename, position, orientation, north_oriented_exits):
+    def try_to_add_new_piece(self, filename, position, orientation, north_oriented_exits, return_grid_cell=False):
         retVal, msg = self.can_piece_be_placed_here(filename, position, orientation, north_oriented_exits)
         if retVal:
             grid_cell = self.pixel_position_to_grid_cell(position)
             x,y = grid_cell
             try:
                 self.board[x][y] = BoardPiece.BoardPiece(self.the_game, filename, position, orientation, north_oriented_exits, grid_cell)
+                self.board_list.append( grid_cell )
                 print(msg)
+                if return_grid_cell: # Optional argument asks for the grid_cell to also be returned.
+                    return (True, grid_cell)
                 return True
             except Exception as e:
                 print("Could not add board piece at ("+str(x)+",",str(y)+"), error details: "+str(e))
@@ -101,6 +105,7 @@ class Board(pygame.sprite.Sprite):
         return None # else return None
 
     def get_neighbouring_grid_cell_locations(self,grid_cell):
+        # Returns the grid_cells in which neighbours *might* exist
         x,y = grid_cell
         xLim,yLim = self.bottom_right_cell()
         neighbours = [(x-1,y),(x+1,y),(x,y-1),(x,y+1)] # Since corners don't mate, don't consider corners as neighbours.
@@ -108,19 +113,26 @@ class Board(pygame.sprite.Sprite):
         return [c for c in neighbours if c[0] >= 0 and c[0] <= xLim and c[1] >= 0 and c[1] <= yLim]
 
     def get_neighbouring_pieces_locations(self,grid_cell):
+        # Filters the output of get_neighbouring_grid_cell_locations to only those neighbours who actually do exist.
         return [c for c in self.get_neighbouring_grid_cell_locations(grid_cell) if self.board[c[0]][c[1]] is not None]
+
+    def get_connected_pieces_locations(self,grid_cell):
+        # Filters the output of get_neighbouring_pieces_locations to only those that have a connected exit with this
+        # cell.
+        return [c for c in self.get_neighbouring_pieces_locations(grid_cell) if self.board[c[0]][c[1]].can_pieces_mate(self.get_piece_in_grid_cell(grid_cell))]
 
     def bottom_right_cell(self):
         return (self.num_cells[0]-1, self.num_cells[1]-1)
 
     def get_common_wall(self,first,second):
-        if second not in self.get_neighbouring_grid_cell_locations(first):
-            return None
-
         x1,y1 = first
         x2,y2 = second
         if x1==x2 and y1==y2:
             raise ValueError("Pieces lie in the same grid cell!")
+
+        if second not in self.get_neighbouring_grid_cell_locations(first):
+            return None
+
         if y1 == y2:
             if x2 > x1:
                 return "E" # Second is Eastwards of First.
@@ -131,3 +143,35 @@ class Board(pygame.sprite.Sprite):
                 return "N" # Second is Northwards of First.
             if y2 > y1:
                 return "S" # Second is Southwards of First.
+
+    def find_pieces_with_free_exits(self):
+        # Returns a list of all grid cell tuples that hold pieces with unconnected exits (i.e. possible finish lines)
+        grid_cells_with_free_exits = []
+        for grid_cell in self.board_list:
+            empty_neighbour_locations = [c for c in self.get_neighbouring_grid_cell_locations(grid_cell) if self.board[c[0]][c[1]] is None]
+            for missing_neighbour in empty_neighbour_locations:
+                # If the direction of the missing neighbour is an exit direction
+                if self.get_piece_in_grid_cell(grid_cell).get_direction_to_neighbouring_grid_cell(missing_neighbour) in self.get_piece_in_grid_cell(grid_cell).exit_list:
+                    grid_cells_with_free_exits.append(grid_cell)
+                    break
+        return grid_cells_with_free_exits
+
+    def has_piece(self,grid_cell):
+        # Returns true if grid_cell holds a piece
+        return self.board[grid_cell[0]][grid_cell[1]] is not None
+
+    def find_all_paths(self, start, end, path=[]):
+        # Returns all acyclic paths between start and end, given the connectivity of the current board treated as a
+        # graph.
+        path = path + [start]
+        if start == end:
+            return [path]
+        if not self.has_piece(start):
+            return []
+        paths = []
+        for node in self.get_connected_pieces_locations(start):
+            if node not in path:
+                new_paths = self.find_all_paths(node, end, path)
+                for new_path in new_paths:
+                    paths.append(new_path)
+        return paths

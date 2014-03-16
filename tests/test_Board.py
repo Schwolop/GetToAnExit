@@ -64,8 +64,40 @@ class Test_Board(unittest.TestCase):
     def test_get_common_wall(self):
         self.assertEqual( "E", self.board.get_common_wall( (1,1), (2,1) ) ) # Second should be east of first.
         self.assertEqual( "N", self.board.get_common_wall( (1,1), (1,0) ) ) # Second should be north of first.
-        self.assertRaises(     self.board.get_common_wall( (1,1), (1,1) ) ) # Same grid cell should throw exception.
+        self.assertRaises( ValueError, self.board.get_common_wall, (1,1), (1,1) ) # Same grid cell should throw exception.
         self.assertIsNone(     self.board.get_common_wall( (1,1), (1,3) ) ) # Unconnected grid cells should return none.
+
+    def test_find_pieces_with_free_exits(self):
+        # Piece in the middle of nowhere with a north exit should be regarded as unclosed.
+        _, grid_cell = self.board.try_to_add_new_piece(self.testPieceFilename, (128,128), 0, "N", return_grid_cell=True)
+        self.assertIn( grid_cell, self.board.find_pieces_with_free_exits() )
+
+        # Add a piece above it that connects and there should be no free exits any more.
+        _, grid_cell = self.board.try_to_add_new_piece(self.testPieceFilename, (128,64), 0, "S", return_grid_cell=True)
+        self.assertEqual( [], self.board.find_pieces_with_free_exits() )
+
+    def test_find_all_paths__simple(self):
+        _, start = self.board.try_to_add_new_piece(self.testPieceFilename, (128,64), 0, "S", return_grid_cell=True)
+        _, mid = self.board.try_to_add_new_piece(self.testPieceFilename, (128,64*2), 0, "NS", return_grid_cell=True)
+        _, end = self.board.try_to_add_new_piece(self.testPieceFilename, (128,64*3), 0, "N", return_grid_cell=True)
+        self.assertEqual( 1, len(self.board.find_all_paths(start,end,[])) ) # Should only return one path
+        self.assertIn( [start,mid,end], self.board.find_all_paths(start,end,[]) ) # And it should be start->mid->end
+
+    def test_find_all_paths__complex(self):
+        _, start = self.board.try_to_add_new_piece(self.testPieceFilename, (64*2,64*1), 0, "ESW", return_grid_cell=True)
+        _, n2 = self.board.try_to_add_new_piece(self.testPieceFilename, (64*2,64*2), 0, "NS", return_grid_cell=True)
+        _, end = self.board.try_to_add_new_piece(self.testPieceFilename, (64*2,64*3), 0, "ENW", return_grid_cell=True)
+        _, n3 = self.board.try_to_add_new_piece(self.testPieceFilename, (64*3,64*1), 0, "WS", return_grid_cell=True)
+        _, n4 = self.board.try_to_add_new_piece(self.testPieceFilename, (64*3,64*2), 0, "NS", return_grid_cell=True)
+        _, n5 = self.board.try_to_add_new_piece(self.testPieceFilename, (64*3,64*3), 0, "WN", return_grid_cell=True)
+        _, n6 = self.board.try_to_add_new_piece(self.testPieceFilename, (64*1,64*1), 0, "ES", return_grid_cell=True)
+        _, n7 = self.board.try_to_add_new_piece(self.testPieceFilename, (64*1,64*2), 0, "NS", return_grid_cell=True)
+        _, n8 = self.board.try_to_add_new_piece(self.testPieceFilename, (64*1,64*3), 0, "EN", return_grid_cell=True)
+
+        self.assertEqual( [], self.board.find_all_paths(start,end,[]) ) # Will fail, but will print all paths.
+        #TODO: Fix this so Board.get_connected_pieces_locations() doesn't return invalid connections.
+        self.assertEqual( 3, len(self.board.find_all_paths(start,end,[])) ) # Should return three paths
+        self.assertIn( [start,n2,end], self.board.find_all_paths(start,end,[]) ) # One should be start->mid->end
 
 if __name__ == '__main__':
     unittest.main()
