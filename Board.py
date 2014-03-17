@@ -181,6 +181,14 @@ class Board(pygame.sprite.Sprite):
                     break
         return grid_cells_with_free_exits
 
+    def find_dead_end_pieces(self):
+        # Returns a list of all grid cell tuples that have only one exit
+        grid_cells_with_dead_ends = []
+        for grid_cell in self.board_list:
+            if len(self.get_board_piece(grid_cell).exit_list) == 1:
+                grid_cells_with_dead_ends.append(grid_cell)
+        return grid_cells_with_dead_ends
+
     def has_piece(self,grid_cell):
         # Returns true if grid_cell holds a piece
         return self.board[grid_cell[0]][grid_cell[1]] is not None
@@ -214,12 +222,12 @@ class Board(pygame.sprite.Sprite):
                     max_length = len(longest)
         self.longest_path = longest_path
 
-    def recalculate_longest_path_between_any_pieces(self):
-        # Returns the longest path between any pieces. (This is likely to be slower than a sensible Floyd-Warshall
-        # algorithm or equivalent!)
+    def recalculate_longest_path_between_exits_or_dead_ends(self):
+        # Returns the longest path between any terminal or un-terminated. (FYI: This is NP-complete, so bugger
+        # optimising it!)
         max_length = 0
         longest_path = []
-        for first,second in itertools.combinations(self.board_list,2):
+        for first,second in itertools.combinations(set(self.find_pieces_with_free_exits()).union(set(self.find_dead_end_pieces())),2):
             paths = self.find_all_paths(first,second)
             if len(paths) > 0:
                 longest = max(paths, key = lambda path: len(path))

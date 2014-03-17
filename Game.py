@@ -3,6 +3,7 @@ import sys
 from pygame.locals import *
 import collections
 import os
+import threading
 
 import RoadPiece
 import AvailablePieces
@@ -30,8 +31,11 @@ class Game:
         pygame.display.set_caption(self.title)
 
         self.timer_tick_period = 10
-        self.spawn_new_piece_time = 1000 # Time (ms) before a new piece is spawned.
+        self.spawn_new_piece_time = 2000 # Time (ms) before a new piece is spawned.
         self.last_spawn_new_piece_time = pygame.time.get_ticks()
+
+        self.longest_path_calculator = None # A future that calculates the longest path asynchronously.
+        self.longest_path_calculator_needs_to_run = False
 
         self.road = collections.namedtuple('road','filename exits')
         self.roads = [
@@ -78,7 +82,7 @@ class Game:
                 self.beingDraggedPiece.kill()
                 if retval:
                     print("Piece added successfully.")
-                    self.board.recalculate_longest_path_between_any_pieces()
+                    self.longest_path_calculator_needs_to_run = True
                 else:
                     print("Piece could not be added here. Attempting to return it to the available pieces.")
                     self.available_pieces.try_to_return_piece( self.beingDraggedPiece, self.beingDraggedIndex )
@@ -88,6 +92,18 @@ class Game:
         if self.mouseIsDown:
             if self.beingDraggedPiece:
                 self.beingDraggedPiece.move(self.currentMousePos)
+
+        # If thread isn't running to calculate path, and a piece was added since last run, spawn it and start.
+        if not self.longest_path_calculator and self.longest_path_calculator_needs_to_run:
+            self.longest_path_calculator_needs_to_run = False
+            self.longest_path_calculator = threading.Thread(target=self.board.recalculate_longest_path_between_exits_or_dead_ends)
+            self.longest_path_calculator.start()
+
+        # If path calculator was running but now has finished, join and delete it.
+        if self.longest_path_calculator and not self.longest_path_calculator.is_alive():
+            self.longest_path_calculator.join()
+            del(self.longest_path_calculator)
+            self.longest_path_calculator = None
 
         # Clear all one-iteration flags.
         self.mouseJustWentDown = False
