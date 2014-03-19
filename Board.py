@@ -1,5 +1,6 @@
 import pygame
 import itertools
+import collections
 
 import BoardPiece
 import RoadPiece
@@ -32,6 +33,8 @@ class Board(pygame.sprite.Sprite):
 
         self.longest_path = []
         self.path_overlay = PathOverlay(the_game,bounds)
+        self.all_paths = collections.defaultdict(lambda:collections.defaultdict(list)) # Database of cached paths indexed
+        # start then end then an unordered list of paths between these nodes.
 
         # Add this object to the objects to draw
         self.the_game.objects_to_draw.add(self, layer=1) # Behind everything
@@ -193,9 +196,18 @@ class Board(pygame.sprite.Sprite):
         # Returns true if grid_cell holds a piece
         return self.board[grid_cell[0]][grid_cell[1]] is not None
 
-    def find_all_paths(self, start, end, path=[]):
+    def find_all_paths(self, start, end, path=[], clear_cache=True):
         # Returns all acyclic paths between start and end, given the connectivity of the current board treated as a
-        # graph.
+        # graph. This can be memoized until the board changes, but this function defaults to clearing the cache unless
+        # the caller explicitly knows better.
+
+        if clear_cache:
+            self.clear_path_cache()
+
+        # If already cached, return cached version.
+        if self.all_paths[start][end]:
+            return self.all_paths[start][end]
+
         path = path + [start]
         if start == end:
             return [path]
@@ -207,14 +219,23 @@ class Board(pygame.sprite.Sprite):
                 new_paths = self.find_all_paths(node, end, path)
                 for new_path in new_paths:
                     paths.append(new_path)
+
+        # Before returning, add these paths to the cache.
+        self.all_paths[start][end] = paths
+
         return paths
+
+    def clear_path_cache(self):
+        del(self.all_paths)
+        self.all_paths = collections.defaultdict(lambda:collections.defaultdict(list))
 
     def recalculate_longest_path_between_exits(self):
         # Returns the longest path between pieces with free exits.
+        self.clear_path_cache() # Clear path cache, then preserve it within this function.
         max_length = 0
         longest_path = []
         for first,second in itertools.combinations(self.find_pieces_with_free_exits(),2):
-            paths = self.find_all_paths(first,second)
+            paths = self.find_all_paths(first,second,clear_cache=False)
             if len(paths) > 0:
                 longest = max(paths, key = lambda path: len(path))
                 if len(longest) > max_length:
@@ -225,10 +246,11 @@ class Board(pygame.sprite.Sprite):
     def recalculate_longest_path_between_exits_or_dead_ends(self):
         # Returns the longest path between any terminal or un-terminated. (FYI: This is NP-complete, so bugger
         # optimising it!)
+        self.clear_path_cache() # Clear path cache, then preserve it within this function.
         max_length = 0
         longest_path = []
         for first,second in itertools.combinations(set(self.find_pieces_with_free_exits()).union(set(self.find_dead_end_pieces())),2):
-            paths = self.find_all_paths(first,second)
+            paths = self.find_all_paths(first,second,clear_cache=False)
             if len(paths) > 0:
                 longest = max(paths, key = lambda path: len(path))
                 if len(longest) > max_length:
