@@ -15,7 +15,7 @@ class PathOverlay(pygame.sprite.Sprite):
         self.image.set_colorkey((0,0,0)) # Black is transparent.
 
         # Add this object to the objects to draw
-        self.the_game.objects_to_draw.add(self, layer=10) # In front of everything
+        self.the_game.objects_to_draw.add(self, layer=9) # In front of everything except score overlay.
 
 class Board(pygame.sprite.Sprite):
     def __init__(self, the_game, bounds):

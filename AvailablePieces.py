@@ -18,6 +18,7 @@ class AvailablePieces(pygame.sprite.Sprite):
         self.progress_bar_height = 10
         self.progress_count_towards_new_piece = 0
         self.progress_bar_increments = self.the_game.spawn_new_piece_time / self.the_game.timer_tick_period
+        self.progress_bar_colour = (0,0,255)
 
         # Sprite atributes
         self.rect = pygame.Rect( *self.calculate_rect_bounds() )
@@ -28,13 +29,18 @@ class AvailablePieces(pygame.sprite.Sprite):
 
         self.pieces = []
 
+    def adjust_progress_bar(self, total, current, colour):
+        self.progress_bar_increments = total
+        self.progress_count_towards_new_piece = current
+        self.progress_bar_colour = colour
+
     def update(self):
         # Recreate self.image and self.rect given current content.
         self.rect = pygame.Rect( *self.calculate_rect_bounds() )
         pygame.draw.rect(self.image, (255,0,0), (0,0,self.rect.width,self.rect.height - self.progress_bar_height), 1)
 
-        # Draw progress bar (left in blue, right in black)
-        pygame.draw.rect(self.image, (0,0,255) if len(self.pieces)<self.maximum_pieces else (255,0,0), (0,self.rect.height - self.progress_bar_height,self.rect.width*(self.progress_count_towards_new_piece/self.progress_bar_increments),self.progress_bar_height), 0)
+        # Draw progress bar (left in colour, right in black)
+        pygame.draw.rect(self.image, self.progress_bar_colour, (0,self.rect.height - self.progress_bar_height,self.rect.width*(self.progress_count_towards_new_piece/self.progress_bar_increments),self.progress_bar_height), 0)
         pygame.draw.rect(self.image, (0,0,0), (self.rect.width*(self.progress_count_towards_new_piece/self.progress_bar_increments),self.rect.height - self.progress_bar_height,self.rect.width*(1.0-(self.progress_count_towards_new_piece/self.progress_bar_increments)),self.progress_bar_height), 0)
 
     def calculate_rect_bounds(self):
@@ -45,6 +51,8 @@ class AvailablePieces(pygame.sprite.Sprite):
 
     def try_generate_new_piece(self):
         num_pieces = len(self.pieces)
+        self. progress_bar_colour = (0,0,255) if num_pieces < self.maximum_pieces else (255,0,0) # Recolour bar.
+
         if num_pieces >= self.maximum_pieces:
             print("excess pieces created")
             pygame.event.post( pygame.event.Event( Game.Game.GAME_EVENT, {'subtype':Game.Game.EXCESS_PIECES_CREATED} ) )
@@ -101,5 +109,6 @@ class AvailablePieces(pygame.sprite.Sprite):
         self.pieces.remove(piece) # Finally, remove the dragged piece from the list entirely.
         piece.kill() # and kill its sprite.
 
-    def increment_progess_bar(self,amount):
-        self.progress_count_towards_new_piece += amount
+    def add_to_progess_bar(self,amount):
+        self.progress_count_towards_new_piece += amount # amount can be negative
+        self.progress_count_towards_new_piece = max( min(self.progress_count_towards_new_piece, self.progress_bar_increments), 0 )

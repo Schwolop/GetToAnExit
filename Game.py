@@ -12,11 +12,22 @@ import Board
 
 
 class Game:
+    # Event types
     TIMER_TICK = USEREVENT+1
     GAME_EVENT = USEREVENT+2
+
+    # Game event sub-types
     GENERATE_NEW_PIECE = 1
     EXCESS_PIECES_CREATED = 2
     FAILED_TO_RETURN_PIECE = 3
+    FINAL_COUNTDOWN_ELAPSED = 4
+
+    # Game states
+    INTRODUCTION = 1
+    MAIN_GAMEPLAY = 2
+    FINAL_COUNTDOWN = 3
+    SCORE_DISPLAY = 4
+
     def __init__(self):
         pygame.init()
         self.resolution = (1280,960)
@@ -33,6 +44,8 @@ class Game:
         self.timer_tick_period = 10
         self.spawn_new_piece_time = 2000 # Time (ms) before a new piece is spawned.
         self.last_spawn_new_piece_time = pygame.time.get_ticks()
+        self.final_countdown_time = 10000 # Time (ms) allowed at end of game to place final pieces.
+        self.game_state = Game.MAIN_GAMEPLAY # TODO: Change to INTRODUCTION
 
         self.longest_path_calculator = None # A future that calculates the longest path asynchronously.
         self.longest_path_calculator_needs_to_run = False
@@ -57,6 +70,7 @@ class Game:
             board_ypos, # Top
             self.resolution[0], # Width
             self.resolution[1]-board_ypos]) # Height
+        self.score_overlay = ScoreOverlay(self,[self.resolution[0]/3,self.resolution[1]/3,self.resolution[0]/3,self.resolution[1]/3])
 
         # Create timer tick.
         pygame.time.set_timer(Game.TIMER_TICK, self.timer_tick_period)
@@ -64,34 +78,35 @@ class Game:
     def run_loop(self):
         self.process_events()
         # Game logic goes here...
-        if self.mouseJustWentDown:
-            (result,pieceToBeDragged,index) = self.available_pieces.mouse_click_can_start_dragging(self.currentMousePos)
-            if result:
-                # Create a BeingDraggedPiece that follows the mouse, and takes other parameters from the 'pieceToBeDragged'.
-                self.beingDraggedIndex = index
-                self.beingDraggedPiece = BeingDraggedPiece.BeingDraggedPiece(
-                    self,
-                    pieceToBeDragged.filename,
-                    self.currentMousePos,
-                    pieceToBeDragged.orientation,
-                    pieceToBeDragged.north_oriented_exits)
-                self.objects_to_draw.add(self.beingDraggedPiece)
-        if self.mouseJustWentUp:
-            if self.beingDraggedPiece:
-                retval = self.board.try_to_add_new_piece( self.beingDraggedPiece.filename,self.currentMousePos,self.beingDraggedPiece.orientation,self.beingDraggedPiece.north_oriented_exits )
-                self.beingDraggedPiece.kill()
-                if retval:
-                    print("Piece added successfully.")
-                    self.longest_path_calculator_needs_to_run = True
-                else:
-                    print("Piece could not be added here. Attempting to return it to the available pieces.")
-                    self.available_pieces.try_to_return_piece( self.beingDraggedPiece, self.beingDraggedIndex )
-                # Finally, destroy the Game's cache of the dragged piece and its index.
-                self.beingDraggedPiece = None
-                self.beingDraggedIndex = -1
-        if self.mouseIsDown:
-            if self.beingDraggedPiece:
-                self.beingDraggedPiece.move(self.currentMousePos)
+        if self.game_state == Game.MAIN_GAMEPLAY or self.game_state == Game.FINAL_COUNTDOWN:
+            if self.mouseJustWentDown:
+                (result,pieceToBeDragged,index) = self.available_pieces.mouse_click_can_start_dragging(self.currentMousePos)
+                if result:
+                    # Create a BeingDraggedPiece that follows the mouse, and takes other parameters from the 'pieceToBeDragged'.
+                    self.beingDraggedIndex = index
+                    self.beingDraggedPiece = BeingDraggedPiece.BeingDraggedPiece(
+                        self,
+                        pieceToBeDragged.filename,
+                        self.currentMousePos,
+                        pieceToBeDragged.orientation,
+                        pieceToBeDragged.north_oriented_exits)
+                    self.objects_to_draw.add(self.beingDraggedPiece)
+            if self.mouseJustWentUp:
+                if self.beingDraggedPiece:
+                    retval = self.board.try_to_add_new_piece( self.beingDraggedPiece.filename,self.currentMousePos,self.beingDraggedPiece.orientation,self.beingDraggedPiece.north_oriented_exits )
+                    self.beingDraggedPiece.kill()
+                    if retval:
+                        print("Piece added successfully.")
+                        self.longest_path_calculator_needs_to_run = True
+                    else:
+                        print("Piece could not be added here. Attempting to return it to the available pieces.")
+                        self.available_pieces.try_to_return_piece( self.beingDraggedPiece, self.beingDraggedIndex )
+                    # Finally, destroy the Game's cache of the dragged piece and its index.
+                    self.beingDraggedPiece = None
+                    self.beingDraggedIndex = -1
+            if self.mouseIsDown:
+                if self.beingDraggedPiece:
+                    self.beingDraggedPiece.move(self.currentMousePos)
 
         # If thread isn't running to calculate path, and a piece was added since last run, spawn it and start.
         if not self.longest_path_calculator and self.longest_path_calculator_needs_to_run:
@@ -116,6 +131,7 @@ class Game:
     def process_events(self):
         for event in pygame.event.get():
             if event.type == QUIT:
+                pygame.time.set_timer(Game.TIMER_TICK, 0) # Disable timer tick
                 pygame.quit()
                 sys.exit()
             elif event.type == MOUSEMOTION:
@@ -131,8 +147,17 @@ class Game:
             elif event.type == Game.GAME_EVENT:
                 if event.subtype == Game.GENERATE_NEW_PIECE:
                     self.available_pieces.try_generate_new_piece()
-                elif event.subtype == Game.EXCESS_PIECES_CREATED:
-                    self.end_game(event.subtype)
+                elif event.subtype == Game.EXCESS_PIECES_CREATED or event.subtype == Game.FAILED_TO_RETURN_PIECE:
+                    self.game_state = Game.FINAL_COUNTDOWN
+                    self.available_pieces.adjust_progress_bar( self.final_countdown_time / self.timer_tick_period, self.final_countdown_time / self.timer_tick_period, (255,0,0) ) # Reset progress bar increments and position.
+                elif event.subtype == Game.FINAL_COUNTDOWN_ELAPSED:
+                    self.game_state = Game.SCORE_DISPLAY
+                    self.score_overlay.set_score(
+                        len(self.board.longest_path),                               # length of longest path
+                        len(self.board.find_pieces_with_free_exits()),              # open exits
+                        len(self.board.board_list)-len(self.board.longest_path) )   # num pieces not on path (wasted)
+                    self.score_overlay.show()
+                    print("Score display")
 
     def render(self):
         self.screen.fill((0,0,0))
@@ -142,11 +167,20 @@ class Game:
         self.fps_clock.tick(self.desired_frame_rate)
 
     def do_timer_tick(self):
-        # On every tick...
-        self.available_pieces.increment_progess_bar(1)
-
-        # After X seconds since the last specific event...
-        if pygame.time.get_ticks() - self.last_spawn_new_piece_time > self.spawn_new_piece_time:
+        # On every tick, if in state X...
+        if self.game_state == Game.MAIN_GAMEPLAY:
+            self.available_pieces.add_to_progess_bar(1)
+        elif self.game_state == Game.FINAL_COUNTDOWN:
+            self.available_pieces.add_to_progess_bar(-1)
+            if self.available_pieces.progress_count_towards_new_piece == 0: # If it's decremented to zero again, time's up, go to scoring phase.
+                try:
+                    pygame.event.post( pygame.event.Event( Game.GAME_EVENT, {'subtype':Game.FINAL_COUNTDOWN_ELAPSED} ) )
+                except Exception as e:
+                    print(e)
+                self.game_state = Game.SCORE_DISPLAY
+        # If in state X and Y seconds since the last specific event...
+        if self.game_state == Game.MAIN_GAMEPLAY and \
+                                pygame.time.get_ticks() - self.last_spawn_new_piece_time > self.spawn_new_piece_time:
             try:
                 pygame.event.post( pygame.event.Event( Game.GAME_EVENT, {'subtype':Game.GENERATE_NEW_PIECE} ) )
             except Exception as e:
@@ -154,7 +188,52 @@ class Game:
             self.last_spawn_new_piece_time = pygame.time.get_ticks()
 
     def end_game(self,cause):
-        # Disable timer tick
-        pygame.time.set_timer(Game.TIMER_TICK, 0)
-
         print("End of game, cause = "+str(cause))
+
+class ScoreOverlay(pygame.sprite.Sprite):
+    def __init__(self, the_game, bounds):
+        pygame.sprite.Sprite.__init__(self)  # Call the parent class (Sprite) constructor
+        self.the_game = the_game
+
+        # Sprite atributes
+        self.rect = pygame.Rect( *bounds )
+        self.image = pygame.Surface(self.rect.size)
+        self.image.set_colorkey((0,0,0)) # Black is transparent.
+
+        # Add this object to the objects to draw
+        self.the_game.objects_to_draw.add(self, layer=10) # In front of everything
+
+        self.is_shown = False
+        if 'verdana' in pygame.font.get_fonts():
+            self.font = pygame.font.SysFont('verdana',32)
+        else:
+            self.font = pygame.font.Font(None,32) # Otherwise use default.
+        self.score_text = ["","","",""] # four lines.
+
+    def show(self):
+        self.is_shown = True
+
+    def hide(self):
+        self.is_shown = False
+
+    def set_score(self, longest_path_length, num_pieces_with_open_exits, num_wasted_pieces):
+        wastage = num_wasted_pieces/max(1,num_wasted_pieces+longest_path_length)
+        total_score = (longest_path_length*10) * (1-wastage) - 20*num_pieces_with_open_exits
+        self.score_text[0] = "Path Length = " + str(longest_path_length)
+        self.score_text[1] = "Unclosed Exits = " + str(num_pieces_with_open_exits)
+        self.score_text[2] = "Wastage = {:.1%}".format(wastage)
+        self.score_text[3] = "Total Score = " + str(int(total_score))
+    def update(self):
+        # Recreate self.image given current content.
+        self.image.set_colorkey((0,0,0)) # Black is transparent.
+        pygame.draw.rect(self.image, (0,0,0), self.rect) # Clear the overlay
+        if self.is_shown: # and redraw it only if the overlay is supposed to be shown.
+            self.image.set_colorkey(None) # Remove transparency
+            pygame.draw.rect(self.image, (0,0,0), (0,0,self.rect.width,self.rect.height) )
+            pygame.draw.rect(self.image, (255,255,255), (0,0,self.rect.width,self.rect.height), 2 )
+            spacing = 2
+            initial_height = self.rect.height/2 - 2*32 - 3/2*spacing
+            for i in range(4):
+                text_size = self.font.size(self.score_text[i])
+                text = self.font.render(self.score_text[i], True, (255,255,255))
+                self.image.blit(text, (self.rect.width/2-(text_size[0]/2), initial_height+i*32+i*spacing) )
