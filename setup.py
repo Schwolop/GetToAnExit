@@ -12,8 +12,8 @@ base = None
 if sys.platform == "win32":
     base = "Win32GUI"
 
-setup(  name = "GetToAnExit!",
-        version = "0.1",
+setup(  name = "The Longest Road",
+        version = "1.0",
         description = "A game of skill, chance, and copyright infringement.",
         maintainer="Tom Allen",
         maintainer_email="tom@jugglethis.net",
