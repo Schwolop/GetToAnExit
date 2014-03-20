@@ -42,7 +42,7 @@ class Game:
         pygame.display.set_caption(self.title)
 
         self.timer_tick_period = 10
-        self.spawn_new_piece_time = 2000 # Time (ms) before a new piece is spawned.
+        self.spawn_new_piece_time = 200 # Time (ms) before a new piece is spawned.
         self.last_spawn_new_piece_time = pygame.time.get_ticks()
         self.final_countdown_time = 10000 # Time (ms) allowed at end of game to place final pieces.
         self.game_state = Game.MAIN_GAMEPLAY # TODO: Change to INTRODUCTION
@@ -107,6 +107,11 @@ class Game:
             if self.mouseIsDown:
                 if self.beingDraggedPiece:
                     self.beingDraggedPiece.move(self.currentMousePos)
+        elif self.game_state == Game.SCORE_DISPLAY:
+            if self.mouseJustWentDown:
+                self.game_state = Game.MAIN_GAMEPLAY
+                self.restart()
+                self.score_overlay.hide()
 
         # If thread isn't running to calculate path, and a piece was added since last run, spawn it and start.
         if not self.longest_path_calculator and self.longest_path_calculator_needs_to_run:
@@ -127,6 +132,20 @@ class Game:
         # Render the scene (This draws the background, updates all objects_to_draw, then draws them all to the screen
         # and flips the display.)
         self.render()
+
+    def restart(self):
+        # Recreate state objects.
+        self.objects_to_draw = pygame.sprite.LayeredUpdates()
+        self.beingDraggedPiece = None
+        self.beingDraggedIndex = -1
+        self.available_pieces = AvailablePieces.AvailablePieces(self)
+        board_ypos = ( int(self.available_pieces.rect.height / RoadPiece.RoadPiece.size)+1 ) * RoadPiece.RoadPiece.size # Ensure is a multiple of 32, and further down than available pieces.
+        self.board = Board.Board(self, [ # Bounds of the board are everything but the available pieces area.
+            0, # Left
+            board_ypos, # Top
+            self.resolution[0], # Width
+            self.resolution[1]-board_ypos]) # Height
+        self.score_overlay = ScoreOverlay(self,[self.resolution[0]/3,self.resolution[1]/3,self.resolution[0]/3,self.resolution[1]/3])
 
     def process_events(self):
         for event in pygame.event.get():
