@@ -42,10 +42,9 @@ class Game:
         pygame.display.set_caption(self.title)
 
         self.timer_tick_period = 10
-        self.spawn_new_piece_time = 200 # Time (ms) before a new piece is spawned.
+        self.spawn_new_piece_time = 2000 # Time (ms) before a new piece is spawned.
         self.last_spawn_new_piece_time = pygame.time.get_ticks()
         self.final_countdown_time = 10000 # Time (ms) allowed at end of game to place final pieces.
-        self.game_state = Game.MAIN_GAMEPLAY # TODO: Change to INTRODUCTION
 
         self.longest_path_calculator = None # A future that calculates the longest path asynchronously.
         self.longest_path_calculator_needs_to_run = False
@@ -60,17 +59,9 @@ class Game:
             self.road(os.path.join("resources","culDeSac.png"), 'S')
         ]
 
-        self.objects_to_draw = pygame.sprite.LayeredUpdates()
-        self.beingDraggedPiece = None
-        self.beingDraggedIndex = -1
-        self.available_pieces = AvailablePieces.AvailablePieces(self)
-        board_ypos = ( int(self.available_pieces.rect.height / RoadPiece.RoadPiece.size)+1 ) * RoadPiece.RoadPiece.size # Ensure is a multiple of 32, and further down than available pieces.
-        self.board = Board.Board(self, [ # Bounds of the board are everything but the available pieces area.
-            0, # Left
-            board_ypos, # Top
-            self.resolution[0], # Width
-            self.resolution[1]-board_ypos]) # Height
-        self.score_overlay = ScoreOverlay(self,[self.resolution[0]/3,self.resolution[1]/3,self.resolution[0]/3,self.resolution[1]/3])
+        self.restart()
+        self.game_state = Game.INTRODUCTION
+        self.intro_overlay.show()
 
         # Create timer tick.
         pygame.time.set_timer(Game.TIMER_TICK, self.timer_tick_period)
@@ -109,9 +100,13 @@ class Game:
                     self.beingDraggedPiece.move(self.currentMousePos)
         elif self.game_state == Game.SCORE_DISPLAY:
             if self.mouseJustWentDown:
+                self.game_state = Game.INTRODUCTION
+                self.score_overlay.hide()
+                self.intro_overlay.show()
+        elif self.game_state == Game.INTRODUCTION:
+            if self.mouseJustWentDown:
                 self.game_state = Game.MAIN_GAMEPLAY
                 self.restart()
-                self.score_overlay.hide()
 
         # If thread isn't running to calculate path, and a piece was added since last run, spawn it and start.
         if not self.longest_path_calculator and self.longest_path_calculator_needs_to_run:
@@ -146,6 +141,9 @@ class Game:
             self.resolution[0], # Width
             self.resolution[1]-board_ypos]) # Height
         self.score_overlay = ScoreOverlay(self,[self.resolution[0]/3,self.resolution[1]/3,self.resolution[0]/3,self.resolution[1]/3])
+        self.intro_overlay = IntroOverlay(self,[100,self.resolution[1]/3,self.resolution[0]-200,self.resolution[1]/3])
+        self.intro_overlay.hide()
+        self.score_overlay.hide()
 
     def process_events(self):
         for event in pygame.event.get():
@@ -242,6 +240,7 @@ class ScoreOverlay(pygame.sprite.Sprite):
         self.score_text[1] = "Unclosed Exits = " + str(num_pieces_with_open_exits)
         self.score_text[2] = "Wastage = {:.1%}".format(wastage)
         self.score_text[3] = "Total Score = " + str(int(total_score))
+
     def update(self):
         # Recreate self.image given current content.
         self.image.set_colorkey((0,0,0)) # Black is transparent.
@@ -256,3 +255,55 @@ class ScoreOverlay(pygame.sprite.Sprite):
                 text_size = self.font.size(self.score_text[i])
                 text = self.font.render(self.score_text[i], True, (255,255,255))
                 self.image.blit(text, (self.rect.width/2-(text_size[0]/2), initial_height+i*32+i*spacing) )
+
+class IntroOverlay(pygame.sprite.Sprite):
+    def __init__(self, the_game, bounds):
+        pygame.sprite.Sprite.__init__(self)  # Call the parent class (Sprite) constructor
+        self.the_game = the_game
+
+        # Sprite atributes
+        self.rect = pygame.Rect( *bounds )
+        self.image = pygame.Surface(self.rect.size)
+        self.image.set_colorkey((0,0,0)) # Black is transparent.
+
+        # Add this object to the objects to draw
+        self.the_game.objects_to_draw.add(self, layer=11) # In front of everything
+
+        self.is_shown = False
+        if 'verdana' in pygame.font.get_fonts():
+            self.font = pygame.font.SysFont('verdana',24)
+        else:
+            self.font = pygame.font.Font(None,24) # Otherwise use default.
+
+        self.intro_text = ["",
+                           "--------------------",
+                           "The Longest Road",
+                           "--------------------",
+                           "",
+                           "Drag pieces from the stack at the top, to the board below.",
+                           "You earn points for the length of your longest road, but lose them",
+                           "for leaving intersections open, and for tiles that aren't part of",
+                           "this longest road.",
+                           "",
+                           "Click anywhere to start!"]
+
+    def show(self):
+        self.is_shown = True
+
+    def hide(self):
+        self.is_shown = False
+
+    def update(self):
+        # Recreate self.image given current content.
+        self.image.set_colorkey((0,0,0)) # Black is transparent.
+        pygame.draw.rect(self.image, (0,0,0), self.rect) # Clear the overlay
+        if self.is_shown: # and redraw it only if the overlay is supposed to be shown.
+            self.image.set_colorkey(None) # Remove transparency
+            pygame.draw.rect(self.image, (0,0,0), (0,0,self.rect.width,self.rect.height) )
+            pygame.draw.rect(self.image, (255,255,255), (0,0,self.rect.width,self.rect.height), 2 )
+            spacing = 2
+            initial_height = 2*spacing
+            for i, words in enumerate(self.intro_text):
+                text_size = self.font.size(words)
+                text = self.font.render(words, True, (255,255,255))
+                self.image.blit(text, (self.rect.width/2-(text_size[0]/2), initial_height+i*(24+spacing)) )
