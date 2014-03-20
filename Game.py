@@ -42,9 +42,10 @@ class Game:
         pygame.display.set_caption(self.title)
 
         self.timer_tick_period = 10
-        self.spawn_new_piece_time = 2000 # Time (ms) before a new piece is spawned.
+        self.spawn_new_piece_time = 200 # Time (ms) before a new piece is spawned.
         self.last_spawn_new_piece_time = pygame.time.get_ticks()
-        self.final_countdown_time = 10000 # Time (ms) allowed at end of game to place final pieces.
+        self.final_countdown_time = 1000 # Time (ms) allowed at end of game to place final pieces.
+        self.score_display_start_time = pygame.time.get_ticks()
 
         self.longest_path_calculator = None # A future that calculates the longest path asynchronously.
         self.longest_path_calculator_needs_to_run = False
@@ -98,7 +99,7 @@ class Game:
             if self.mouseIsDown:
                 if self.beingDraggedPiece:
                     self.beingDraggedPiece.move(self.currentMousePos)
-        elif self.game_state == Game.SCORE_DISPLAY:
+        elif self.game_state == Game.SCORE_DISPLAY and pygame.time.get_ticks() - self.score_display_start_time > 2000: # Ensure user sees score screen for at least 2 seconds.
             if self.mouseJustWentDown:
                 self.game_state = Game.INTRODUCTION
                 self.score_overlay.hide()
@@ -173,6 +174,7 @@ class Game:
                         len(self.board.longest_path),                               # length of longest path
                         len(self.board.find_pieces_with_free_exits()),              # open exits
                         len(self.board.board_list)-len(self.board.longest_path) )   # num pieces not on path (wasted)
+                    self.score_display_start_time = pygame.time.get_ticks()
                     self.score_overlay.show()
                     print("Score display")
 
@@ -234,7 +236,7 @@ class ScoreOverlay(pygame.sprite.Sprite):
         self.is_shown = False
 
     def set_score(self, longest_path_length, num_pieces_with_open_exits, num_wasted_pieces):
-        wastage = num_wasted_pieces/max(1,num_wasted_pieces+longest_path_length)
+        wastage = 0 if num_wasted_pieces+longest_path_length == 0 else num_wasted_pieces/(num_wasted_pieces+longest_path_length) # Prevent divide by zero.
         total_score = (longest_path_length*10) * (1-wastage) - 20*num_pieces_with_open_exits
         self.score_text[0] = "Path Length = " + str(longest_path_length)
         self.score_text[1] = "Unclosed Exits = " + str(num_pieces_with_open_exits)
