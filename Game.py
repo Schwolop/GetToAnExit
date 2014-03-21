@@ -42,9 +42,9 @@ class Game:
         pygame.display.set_caption(self.title)
 
         self.timer_tick_period = 10
-        self.spawn_new_piece_time = 200 # Time (ms) before a new piece is spawned.
+        self.spawn_new_piece_time = 2000 # Time (ms) before a new piece is spawned.
         self.last_spawn_new_piece_time = pygame.time.get_ticks()
-        self.final_countdown_time = 1000 # Time (ms) allowed at end of game to place final pieces.
+        self.final_countdown_time = 10000 # Time (ms) allowed at end of game to place final pieces.
         self.score_display_start_time = pygame.time.get_ticks()
 
         self.longest_path_calculator = None # A future that calculates the longest path asynchronously.
@@ -141,7 +141,7 @@ class Game:
             board_ypos, # Top
             self.resolution[0], # Width
             self.resolution[1]-board_ypos]) # Height
-        self.score_overlay = ScoreOverlay(self,[self.resolution[0]/3,self.resolution[1]/3,self.resolution[0]/3,self.resolution[1]/3])
+        self.score_overlay = ScoreOverlay(self,[self.resolution[0]/5,self.resolution[1]/3,self.resolution[0]*3/5,self.resolution[1]/3])
         self.intro_overlay = IntroOverlay(self,[100,self.resolution[1]/3,self.resolution[0]-200,self.resolution[1]/3])
         self.intro_overlay.hide()
         self.score_overlay.hide()
@@ -170,12 +170,21 @@ class Game:
                     self.available_pieces.adjust_progress_bar( self.final_countdown_time / self.timer_tick_period, self.final_countdown_time / self.timer_tick_period, (255,0,0) ) # Reset progress bar increments and position.
                 elif event.subtype == Game.FINAL_COUNTDOWN_ELAPSED:
                     self.game_state = Game.SCORE_DISPLAY
+                    # If path calculator is still running block until joined then delete it.
+                    if self.longest_path_calculator and self.longest_path_calculator.is_alive():
+                        print( "waiting for path calculator...")
+                        self.score_overlay.show_waiting_for_path_calculator()
+                        while self.longest_path_calculator and self.longest_path_calculator.is_alive():
+                            self.render()
+                            pygame.time.wait(10) # Wait 10ms and look again.
+                        print("done")
+                        del(self.longest_path_calculator)
+                        self.longest_path_calculator = None
                     self.score_overlay.set_score(
                         len(self.board.longest_path),                               # length of longest path
                         len(self.board.find_pieces_with_free_exits()),              # open exits
                         len(self.board.board_list)-len(self.board.longest_path) )   # num pieces not on path (wasted)
                     self.score_display_start_time = pygame.time.get_ticks()
-                    self.score_overlay.show()
                     print("Score display")
 
     def render(self):
@@ -235,6 +244,13 @@ class ScoreOverlay(pygame.sprite.Sprite):
     def hide(self):
         self.is_shown = False
 
+    def show_waiting_for_path_calculator(self):
+        self.score_text[0] = "Waiting for"
+        self.score_text[1] = "path planner..."
+        self.score_text[2] = ""
+        self.score_text[3] = "(You must have done well!)"
+        self.is_shown = True
+
     def set_score(self, longest_path_length, num_pieces_with_open_exits, num_wasted_pieces):
         wastage = 0 if num_wasted_pieces+longest_path_length == 0 else num_wasted_pieces/(num_wasted_pieces+longest_path_length) # Prevent divide by zero.
         total_score = (longest_path_length*10) * (1-wastage) - 20*num_pieces_with_open_exits
@@ -242,6 +258,7 @@ class ScoreOverlay(pygame.sprite.Sprite):
         self.score_text[1] = "Unclosed Exits = " + str(num_pieces_with_open_exits)
         self.score_text[2] = "Wastage = {:.1%}".format(wastage)
         self.score_text[3] = "Total Score = " + str(int(total_score))
+        self.is_shown = True
 
     def update(self):
         # Recreate self.image given current content.
