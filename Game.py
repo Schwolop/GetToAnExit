@@ -42,9 +42,9 @@ class Game:
         pygame.display.set_caption(self.title)
 
         self.timer_tick_period = 10
-        self.spawn_new_piece_time = 200 # Time (ms) before a new piece is spawned.
+        self.spawn_new_piece_time = 2000 # Time (ms) before a new piece is spawned.
         self.last_spawn_new_piece_time = pygame.time.get_ticks()
-        self.final_countdown_time = 1000 # Time (ms) allowed at end of game to place final pieces.
+        self.final_countdown_time = 10000 # Time (ms) allowed at end of game to place final pieces.
         self.score_display_start_time = pygame.time.get_ticks()
 
         self.longest_path_calculator = None # A future that calculates the longest path asynchronously.
