@@ -142,7 +142,7 @@ class Game:
             self.resolution[0], # Width
             self.resolution[1]-board_ypos]) # Height
         self.score_overlay = ScoreOverlay(self,[self.resolution[0]/5,self.resolution[1]/3,self.resolution[0]*3/5,self.resolution[1]/3])
-        self.intro_overlay = IntroOverlay(self,[100,self.resolution[1]/3,self.resolution[0]-200,self.resolution[1]/3])
+        self.intro_overlay = IntroOverlay(self,[100,self.resolution[1]/4,self.resolution[0]-200,self.resolution[1]/2])
         self.intro_overlay.hide()
         self.score_overlay.hide()
 
@@ -256,8 +256,8 @@ class ScoreOverlay(pygame.sprite.Sprite):
         wastage = 0 if num_wasted_pieces+longest_path_length == 0 else num_wasted_pieces/(num_wasted_pieces+longest_path_length) # Prevent divide by zero.
         total_score = (longest_path_length*10) * (1-wastage) - 20*num_pieces_with_open_exits
         self.score_text[0] = "Path Length of " + str(longest_path_length) + " = " + str(longest_path_length*10)
-        self.score_text[1] = "Minus Wastage of {:.1%}".format(wastage) + " = " + str(round( (longest_path_length*10) * wastage ))
-        self.score_text[2] = "Minus " + str(num_pieces_with_open_exits) + " Unclosed Exit" + ("" if num_pieces_with_open_exits==1 else "s") + " = " + str(20*num_pieces_with_open_exits)
+        self.score_text[1] = "Wastage of {:.1%}".format(wastage) + " = " + str(round( (longest_path_length*10) * -wastage ))
+        self.score_text[2] = str(num_pieces_with_open_exits) + " Unclosed Exit" + ("" if num_pieces_with_open_exits==1 else "s") + " = " + str(-20*num_pieces_with_open_exits)
         self.score_text[3] = ""
         self.score_text[4] = "Total Score = " + str(round(total_score))
         self.is_shown = True
@@ -297,6 +297,7 @@ class IntroOverlay(pygame.sprite.Sprite):
             self.font = pygame.font.Font(None,24) # Otherwise use default.
 
         self.intro_text = ["",
+                           "",
                            "--------------------",
                            "The Longest Road",
                            "--------------------",
@@ -305,6 +306,9 @@ class IntroOverlay(pygame.sprite.Sprite):
                            "You earn points for the length of your longest road, but lose them",
                            "for leaving intersections open, and for tiles that aren't part of",
                            "this longest road.",
+                           "",
+                           "Pieces that can't be placed properly go back into the stack - this",
+                           "includes the area beside the stack itself, and can be very useful!",
                            "",
                            "Click anywhere to start!"]
 
