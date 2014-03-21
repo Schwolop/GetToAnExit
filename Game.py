@@ -42,9 +42,9 @@ class Game:
         pygame.display.set_caption(self.title)
 
         self.timer_tick_period = 10
-        self.spawn_new_piece_time = 2000 # Time (ms) before a new piece is spawned.
+        self.spawn_new_piece_time = 200 # Time (ms) before a new piece is spawned.
         self.last_spawn_new_piece_time = pygame.time.get_ticks()
-        self.final_countdown_time = 10000 # Time (ms) allowed at end of game to place final pieces.
+        self.final_countdown_time = 1000 # Time (ms) allowed at end of game to place final pieces.
         self.score_display_start_time = pygame.time.get_ticks()
 
         self.longest_path_calculator = None # A future that calculates the longest path asynchronously.
@@ -236,7 +236,7 @@ class ScoreOverlay(pygame.sprite.Sprite):
             self.font = pygame.font.SysFont('verdana',32)
         else:
             self.font = pygame.font.Font(None,32) # Otherwise use default.
-        self.score_text = ["","","",""] # four lines.
+        self.score_text = ["","","","",""] # five lines.
 
     def show(self):
         self.is_shown = True
@@ -245,19 +245,21 @@ class ScoreOverlay(pygame.sprite.Sprite):
         self.is_shown = False
 
     def show_waiting_for_path_calculator(self):
-        self.score_text[0] = "Waiting for"
-        self.score_text[1] = "path planner..."
-        self.score_text[2] = ""
-        self.score_text[3] = "(You must have done well!)"
+        self.score_text[0] = ""
+        self.score_text[1] = "Waiting for"
+        self.score_text[2] = "path planner..."
+        self.score_text[3] = ""
+        self.score_text[4] = "(You must have done well!)"
         self.is_shown = True
 
     def set_score(self, longest_path_length, num_pieces_with_open_exits, num_wasted_pieces):
         wastage = 0 if num_wasted_pieces+longest_path_length == 0 else num_wasted_pieces/(num_wasted_pieces+longest_path_length) # Prevent divide by zero.
         total_score = (longest_path_length*10) * (1-wastage) - 20*num_pieces_with_open_exits
-        self.score_text[0] = "Path Length = " + str(longest_path_length)
-        self.score_text[1] = "Unclosed Exits = " + str(num_pieces_with_open_exits)
-        self.score_text[2] = "Wastage = {:.1%}".format(wastage)
-        self.score_text[3] = "Total Score = " + str(int(total_score))
+        self.score_text[0] = "Path Length of " + str(longest_path_length) + " = " + str(longest_path_length*10)
+        self.score_text[1] = "Minus Wastage of {:.1%}".format(wastage) + " = " + str(round( (longest_path_length*10) * wastage ))
+        self.score_text[2] = "Minus " + str(num_pieces_with_open_exits) + " Unclosed Exits = " + str(20*num_pieces_with_open_exits)
+        self.score_text[3] = ""
+        self.score_text[4] = "Total Score = " + str(round(total_score))
         self.is_shown = True
 
     def update(self):
@@ -269,8 +271,8 @@ class ScoreOverlay(pygame.sprite.Sprite):
             pygame.draw.rect(self.image, (0,0,0), (0,0,self.rect.width,self.rect.height) )
             pygame.draw.rect(self.image, (255,255,255), (0,0,self.rect.width,self.rect.height), 2 )
             spacing = 2
-            initial_height = self.rect.height/2 - 2*32 - 3/2*spacing
-            for i in range(4):
+            initial_height = self.rect.height/2 - 3*32 - 5/2*spacing
+            for i in range(len(self.score_text)):
                 text_size = self.font.size(self.score_text[i])
                 text = self.font.render(self.score_text[i], True, (255,255,255))
                 self.image.blit(text, (self.rect.width/2-(text_size[0]/2), initial_height+i*32+i*spacing) )
