@@ -257,7 +257,7 @@ class ScoreOverlay(pygame.sprite.Sprite):
         total_score = (longest_path_length*10) * (1-wastage) - 20*num_pieces_with_open_exits
         self.score_text[0] = "Path Length of " + str(longest_path_length) + " = " + str(longest_path_length*10)
         self.score_text[1] = "Minus Wastage of {:.1%}".format(wastage) + " = " + str(round( (longest_path_length*10) * wastage ))
-        self.score_text[2] = "Minus " + str(num_pieces_with_open_exits) + " Unclosed Exits = " + str(20*num_pieces_with_open_exits)
+        self.score_text[2] = "Minus " + str(num_pieces_with_open_exits) + " Unclosed Exit" + ("" if num_pieces_with_open_exits==1 else "s") + " = " + str(20*num_pieces_with_open_exits)
         self.score_text[3] = ""
         self.score_text[4] = "Total Score = " + str(round(total_score))
         self.is_shown = True
