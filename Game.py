@@ -145,6 +145,7 @@ class Game:
         self.intro_overlay = IntroOverlay(self,[100,self.resolution[1]/4,self.resolution[0]-200,self.resolution[1]/2])
         self.intro_overlay.hide()
         self.score_overlay.hide()
+        self.last_spawn_new_piece_time = pygame.time.get_ticks()
 
     def process_events(self):
         for event in pygame.event.get():
@@ -174,7 +175,7 @@ class Game:
                     if self.longest_path_calculator and self.longest_path_calculator.is_alive():
                         print( "waiting for path calculator...")
                         self.score_overlay.show_waiting_for_path_calculator()
-                        while self.longest_path_calculator and self.longest_path_calculator.is_alive():
+                        while self.longest_path_calculator_needs_to_run or (self.longest_path_calculator and self.longest_path_calculator.is_alive()):
                             self.render()
                             pygame.time.wait(10) # Wait 10ms and look again.
                         print("done")
@@ -297,18 +298,19 @@ class IntroOverlay(pygame.sprite.Sprite):
             self.font = pygame.font.Font(None,24) # Otherwise use default.
 
         self.intro_text = ["",
-                           "",
                            "--------------------",
                            "The Longest Road",
                            "--------------------",
                            "",
                            "Drag pieces from the stack at the top, to the board below.",
-                           "You earn points for the length of your longest road, but lose them",
-                           "for leaving intersections open, and for tiles that aren't part of",
-                           "this longest road.",
+                           "You earn points for the length of your longest non-looping road,",
+                           "but lose them for leaving intersections open, and for tiles that",
+                           "aren't part of this longest road.",
                            "",
-                           "Pieces that can't be placed properly go back into the stack - this",
-                           "includes the area beside the stack itself, and can be very useful!",
+                           "Pieces that can't be placed properly go back into the stack. (This",
+                           "includes the area next to the stack itself, and can be very useful!)",
+                           "But when the stack overflows - that's it! - and you have just",
+                           "10 seconds to get your road in order with whatever is left.",
                            "",
                            "Click anywhere to start!"]
 
