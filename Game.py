@@ -57,7 +57,7 @@ class Game:
             self.road(os.path.join("resources","turnRight.png"), 'SE'),
             self.road(os.path.join("resources","teeJunction.png"), 'SEW'),
             self.road(os.path.join("resources","crossJunction.png"), 'NEWS'),
-            self.road(os.path.join("resources","culDeSac.png"), 'S')
+            self.road(os.path.join("resources","finishLine.png"), 'S')
         ]
 
         self.restart()
@@ -112,7 +112,7 @@ class Game:
         # If thread isn't running to calculate path, and a piece was added since last run, spawn it and start.
         if not self.longest_path_calculator and self.longest_path_calculator_needs_to_run:
             self.longest_path_calculator_needs_to_run = False
-            self.longest_path_calculator = threading.Thread(target=self.board.recalculate_longest_path_between_exits_or_dead_ends)
+            self.longest_path_calculator = threading.Thread(target=self.board.recalculate_longest_path(type="dead_ends_only"))
             self.longest_path_calculator.start()
 
         # If path calculator was running but now has finished, join and delete it.
@@ -303,9 +303,9 @@ class IntroOverlay(pygame.sprite.Sprite):
                            "--------------------",
                            "",
                            "Drag pieces from the stack at the top, to the board below.",
-                           "You earn points for the length of your longest non-looping road,",
-                           "but lose them for leaving intersections open, and for tiles that",
-                           "aren't part of this longest road.",
+                           "You earn points for the length of your longest non-looping road",
+                           " between finish lines, but lose them for leaving intersections",
+                           "open, and for tiles that aren't part of this longest road.",
                            "",
                            "Pieces that can't be placed properly go back into the stack. (This",
                            "includes the area next to the stack itself, and can be very useful!)",

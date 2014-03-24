@@ -207,6 +207,9 @@ class Board(pygame.sprite.Sprite):
         # If already cached, return cached version.
         if self.all_paths[start][end]:
             return self.all_paths[start][end]
+        elif self.all_paths[end][start]:
+            self.all_paths[start][end] = self.reverse_paths(self.all_paths[end][start])
+            return self.all_paths[start][end]
 
         path = path + [start]
         if start == end:
@@ -225,31 +228,35 @@ class Board(pygame.sprite.Sprite):
 
         return paths
 
+    def reverse_paths(self,paths):
+        reversed_paths = []
+        for path in paths:
+            reversed_path = path
+            reversed_path.reverse()
+            reversed_paths.append(reversed_path)
+        return reversed_paths
+
     def clear_path_cache(self):
         del(self.all_paths)
         self.all_paths = collections.defaultdict(lambda:collections.defaultdict(list))
 
-    def recalculate_longest_path_between_exits(self):
-        # Returns the longest path between pieces with free exits.
+    def recalculate_longest_path(self,type="any_two_pieces"):
+        # Returns the longest path between any pair of a set of pieces.
+        # The choices are "any_two_pieces", "exits_or_dead_ends", "exits_only", "dead_ends_only"
         self.clear_path_cache() # Clear path cache, then preserve it within this function.
         max_length = 0
         longest_path = []
-        for first,second in itertools.combinations(self.find_pieces_with_free_exits(),2):
-            paths = self.find_all_paths(first,second,clear_cache=False)
-            if len(paths) > 0:
-                longest = max(paths, key = lambda path: len(path))
-                if len(longest) > max_length:
-                    longest_path = longest
-                    max_length = len(longest)
-        self.longest_path = longest_path
 
-    def recalculate_longest_path_between_exits_or_dead_ends(self):
-        # Returns the longest path between any terminal or un-terminated. (FYI: This is NP-complete, so bugger
-        # optimising it!)
-        self.clear_path_cache() # Clear path cache, then preserve it within this function.
-        max_length = 0
-        longest_path = []
-        for first,second in itertools.combinations(set(self.find_pieces_with_free_exits()).union(set(self.find_dead_end_pieces())),2):
+        if type == "any_two_pieces":
+            ends = self.board_list
+        elif type == "exits_or_dead_ends":
+            ends = set(self.find_pieces_with_free_exits()).union(set(self.find_dead_end_pieces()))
+        elif type == "exits_only":
+            ends = self.find_pieces_with_free_exits()
+        elif type == "dead_ends_only":
+            ends = self.find_dead_end_pieces()
+
+        for first,second in itertools.combinations(ends,2):
             paths = self.find_all_paths(first,second,clear_cache=False)
             if len(paths) > 0:
                 longest = max(paths, key = lambda path: len(path))
